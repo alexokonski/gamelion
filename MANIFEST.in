@@ -1,0 +1,3 @@
+include gamelion/config/deployment.ini_tmpl
+recursive-include gamelion/public *
+recursive-include gamelion/templates *
