@@ -32,8 +32,10 @@ def pack(fmt, *args):
         else:
             if repeat_count != '':
                 format_string += repeat_count
+                index += int(repeat_count)
+            else:
+                index += 1
             format_string += format
-        index += 1
 
     return struct.pack(format_string, *args)
 
