@@ -1,3 +1,12 @@
+"""
+masterserver.py
+
+Runs a Master Server query for Valve games using the protocol specified in:
+http://developer.valvesoftware.com/wiki/Master_Server_Query_Protocol
+
+It then adds the results to the database.  This script is designed to be run as a cron job
+"""
+
 from paste.deploy import appconfig
 from pylons import config
 import socket
@@ -11,74 +20,118 @@ from gamelion.model import *
 import gamelion.lib.stringz as struct
 import struct as pystruct
 
-class MasterServerQuery(object):
-    master_servers = [ ('hl2master.steampowered.com', 27011) ]
+master_servers = [ ('hl2master.steampowered.com', 27011) ]
 
-    def __init__(self):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.settimeout(2.0)
+_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+_socket.settimeout(2.0)
 
-    def _pack_query(self, region, ip_port, filter):
-        return struct.pack('!2Bzz', 0x31, region, ip_port, filter)
+"""
+Pack a Master Server Query
+"""
+def pack_query(region, ip_port, filter):
+    return struct.pack('!2Bzz', 0x31, region, ip_port, filter)
 
-    def _query_server(self, address, data):
-        print repr(data)
-        self.socket.sendto(data, address)
+"""
+Send a single query packet to the master server at address, the full query is made up
+of a group of these
+"""
+def query_server(address, data):
+    _socket.sendto(data, address)
 
-    def _receive_response(self):
+"""
+Block and receive a response from the master server (with a timeout)
+"""
+def receive_response():
+    response = ''
+    try:
+        response = _socket.recv(2048)
+    except socket.timeout:
         response = ''
-        try:
-            response = self.socket.recv(2048)
-        except socket.timeout:
-            response = ''
 
-        return response
+    return response
 
-    def _unpack_response(self, response):
-        if len(response) == 0:
-            return []
+"""
+Unpack a response from a master server, and return the results in a list
+"""
+def unpack_response(response):
+    if len(response) == 0:
+        return []
 
-        ips = []
-        entry_format = '!4sH'
-        header_format = '6s'
-        entry_size = pystruct.calcsize(entry_format)
-        header_size = pystruct.calcsize(header_format)
-        offset = 0
+    ips = []
+    entry_format = '!4sH'
+    header_format = '6s'
+    entry_size = pystruct.calcsize(entry_format)
+    header_size = pystruct.calcsize(header_format)
+    offset = 0
 
-        header = struct.unpack('6s', response)
-        response = response[header_size:]
+    # Strip off the header
+    header = struct.unpack('6s', response)
+    response = response[header_size:]
 
-        while len(response) >= entry_size:
-            (ip, port) = struct.unpack(entry_format, response)
-            response = response[offset:]
-            offset += entry_size
+    # Get our (ip, port) pairs and put them in a pretty format
+    while len(response) >= entry_size:
+        (ip, port) = struct.unpack(entry_format, response)
+        response = response[entry_size:]
 
-            ip_string = socket.inet_ntoa(ip)
-            ips.append((ip_string, port))
+        ip_string = socket.inet_ntoa(ip)
+        ips.append((ip_string, port))
 
-        print ips[-1]
-        return ips
+    return ips
 
-    def _run_full_query(self, server_address):
-        servers = [('0.0.0.0', 0)]
-        while len(servers) <= 1 or servers[-1] != ('0.0.0.0', 0):
-            previous_server = '%s:%d' % (servers[-1])
-            #print previous_server
-            query_data = self._pack_query(0x01, previous_server, '\\napp\\500\\full\\1\\proxy\\1')
-            self._query_server(server_address, query_data)
-            response = self._receive_response()
-            servers.extend(self._unpack_response(response))
-            #print servers
+"""
+Run a full master server query
+"""
+def run_full_query(server_address):
+    servers = [('0.0.0.0', 0)]
 
-        return servers
+    # get all the ips the master server wishes to give us
+    while len(servers) <= 1 or servers[-1] != ('0.0.0.0', 0):
 
-    def run(self):
-        servers = []
-        for server_address in MasterServerQuery.master_servers:
-            servers.extend(self._run_full_query(server_address))
+        # get a string for the last ip the server sent us
+        previous_server = '%s:%d' % (servers[-1])
 
-        print servers
+        # Prepare our query with region, last ip, and filter
+        query_data = pack_query(0x01, previous_server, r'\napp\500\proxy\1')
+
+        # Tell the server we'd like some data
+        query_server(server_address, query_data)
+
+        # Wait to hear back, and add the results to the list
+        response = receive_response()
+        servers.extend(unpack_response(response))
+
+    assert servers[0] == ('0.0.0.0', 0)
+    assert servers[-1] == ('0.0.0.0', 0)
+    servers = servers[1:-1]
+
+    #print servers
+    return servers
+
+"""
+Add a list of ips and ports to the database
+"""
+def add_results_to_database(server_list):
+    for ip, port in server_list:
+        exists_query = Session.query(Server).filter(Server.address == ip).filter(Server.port == port).first()
+        if not exists_query:
+            server = Server()
+            server.address = ip
+            server.port = port
+            Session.add(server)
+            Session.commit()
+
+"""
+Query the master server and add the results to the database
+"""
+def main():
+    servers = []
+
+    # run through all the master servers we know of and ask them for ips
+    for server_address in master_servers:
+        servers.extend(run_full_query(server_address))
+
+    # add everything we got to the database
+    add_results_to_database(servers)
 
 if __name__ == '__main__':
-    server_query = MasterServerQuery()
-    server_query.run()
+    main()
