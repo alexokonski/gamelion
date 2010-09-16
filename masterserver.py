@@ -25,23 +25,20 @@ master_servers = [ ('hl2master.steampowered.com', 27011) ]
 _socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 _socket.settimeout(2.0)
 
-"""
-Pack a Master Server Query
-"""
 def pack_query(region, ip_port, filter):
+    """ Pack a Master Server Query """
     return struct.pack('!2Bzz', 0x31, region, ip_port, filter)
 
-"""
-Send a single query packet to the master server at address, the full query is made up
-of a group of these
-"""
 def query_server(address, data):
+    """
+    Send a single query packet to the master server at address, the full query is made up
+    of a group of these
+    """
     _socket.sendto(data, address)
 
-"""
-Block and receive a response from the master server (with a timeout)
-"""
 def receive_response():
+    """ Block and receive a response from the master server (with a timeout) """
+
     response = ''
     try:
         response = _socket.recv(2048)
@@ -50,10 +47,8 @@ def receive_response():
 
     return response
 
-"""
-Unpack a response from a master server, and return the results in a list
-"""
 def unpack_response(response):
+    """ Unpack a response from a master server, and return the results in a list """
     if len(response) == 0:
         return []
 
@@ -78,10 +73,9 @@ def unpack_response(response):
 
     return ips
 
-"""
-Run a full master server query
-"""
 def run_full_query(server_address):
+    """ Run a full master server query """
+
     servers = [('0.0.0.0', 0)]
 
     # get all the ips the master server wishes to give us
@@ -104,13 +98,10 @@ def run_full_query(server_address):
     assert servers[-1] == ('0.0.0.0', 0)
     servers = servers[1:-1]
 
-    #print servers
     return servers
 
-"""
-Add a list of ips and ports to the database
-"""
 def add_results_to_database(server_list):
+    """ Add a list of ips and ports to the database """
     for ip, port in server_list:
         exists_query = Session.query(Server).filter(Server.address == ip).filter(Server.port == port).first()
         if not exists_query:
@@ -120,10 +111,8 @@ def add_results_to_database(server_list):
             Session.add(server)
             Session.commit()
 
-"""
-Query the master server and add the results to the database
-"""
 def main():
+    """ Query the master server and add the results to the database """
     servers = []
 
     # run through all the master servers we know of and ask them for ips
