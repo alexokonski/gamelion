@@ -9,3 +9,4 @@ class Server(Base):
 
     address = Column(String(15), nullable=False, primary_key=True)
     port = Column(Integer, nullable=False, primary_key=True)
+    name = Column(String(256), nullable=True)
