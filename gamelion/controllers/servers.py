@@ -15,5 +15,5 @@ class ServersController(BaseController):
         #return render('/servers.mako')
         # or, return a string
 
-        c.servers = Session.query(Server).all()
+        c.servers = Session.query(Server).filter(Server.name != None).all()
         return render('/servers.mako')

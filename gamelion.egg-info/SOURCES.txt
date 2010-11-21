@@ -1,5 +1,4 @@
 MANIFEST.in
-README.txt
 setup.cfg
 setup.py
 gamelion/__init__.py
@@ -19,16 +18,20 @@ gamelion/config/middleware.py
 gamelion/config/routing.py
 gamelion/controllers/__init__.py
 gamelion/controllers/error.py
+gamelion/controllers/servers.py
 gamelion/lib/__init__.py
 gamelion/lib/app_globals.py
 gamelion/lib/base.py
 gamelion/lib/helpers.py
+gamelion/lib/stringz.py
 gamelion/model/__init__.py
 gamelion/model/meta.py
+gamelion/model/schema.py
 gamelion/public/bg.png
 gamelion/public/favicon.ico
-gamelion/public/index.html
 gamelion/public/pylons-logo.gif
+gamelion/templates/servers.mako
 gamelion/tests/__init__.py
 gamelion/tests/test_models.py
 gamelion/tests/functional/__init__.py
+gamelion/tests/functional/test_servers.py

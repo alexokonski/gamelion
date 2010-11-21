@@ -1,0 +1,31 @@
+#servers
+{
+    font-family:"Trebuchet MS", Arial, Helvetica, sans-serif;
+    width:100%;
+    border-collapse:collapse;
+}
+#servers td, #servers th 
+{
+    font-size:1em;
+    border:1px solid #000000;
+    padding:3px 7px 2px 7px;
+}
+#servers th 
+{
+    font-size:1.1em;
+    text-align:left;
+    padding-top:5px;
+    padding-bottom:4px;
+    background-color:#06705D;
+    color:#ffffff;
+}
+#servers tr.alt1 td 
+{
+    color:#000000;
+    background-color:#B4F1DA;
+}
+#servers tr.alt2 td
+{
+    color:#000000;
+    background-color:#FFFFFF;
+}

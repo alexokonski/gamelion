@@ -4,4 +4,5 @@ data/
 *.swp
 *.db
 *.log
+*.egg
 nohup.out

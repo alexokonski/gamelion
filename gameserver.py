@@ -19,11 +19,13 @@ class GameServerQuery(object):
     def __init__(self, server):
         self.server = server
         self.time = 0
+        self.times_sent = 0
 
     def send(self, sock):
         data = struct.pack('<icz', -1, 'T', 'Source Engine Query')
         sock.sendto(data, (self.server.address, self.server.port))
         self.time = time.time()
+        self.times_sent += 1
 
     def process_response(self, response):
         # get the message header to see if it's a split message or not
@@ -33,14 +35,15 @@ class GameServerQuery(object):
         assert header == -1
 
         # unpack the rest of the data
-        server_info = struct.unpack('<cczzzzhccccccczc', response)
-        self.server.name = server_info[2]
+        server_info = struct.unpack('<cczzzzhcccccccz', response)
+        self.server.name = unicode(server_info[2], encoding='latin_1')
         Session.commit()
         return True
 
 # main loop
 if __name__ == "__main__":
     TIMEOUT = 3 # seconds
+    MAX_ATTEMPTS = 5 # only try queries 5 times before we give up
 
     servers = Session.query(Server).all()
     queries = map(lambda s: GameServerQuery(s), servers)
@@ -49,8 +52,15 @@ if __name__ == "__main__":
     while len(queries) > 0:
         # send a few outstanding queries
         now = time.time()
-        queries_to_send = filter(lambda q: now - q.time > TIMEOUT, queries)
+        queries_to_send = filter(lambda q: now - q.time > TIMEOUT and \
+                                 q.times_sent < MAX_ATTEMPTS, queries)
 
+        queries_under_max = filter(lambda q: q.times_sent < MAX_ATTEMPTS, \
+                                    queries)
+        if len(queries_under_max) == 0:
+            print len(queries), "queries didn't make it"
+            break
+        
         for query in queries_to_send[:5]: # only send a few at a time
             query.send(sock)
 
