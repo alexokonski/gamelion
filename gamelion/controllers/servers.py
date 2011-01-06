@@ -11,9 +11,15 @@ log = logging.getLogger(__name__)
 class ServersController(BaseController):
 
     def index(self):
-        # Return a rendered template
-        #return render('/servers.mako')
-        # or, return a string
+        likeString = '%'
 
-        c.servers = Session.query(Server).filter(Server.name != None).all()
+        if 'search' in request.params:
+            likeString = '%' + request.params['search'] + '%'
+
+        c.servers = Session.query(Server)\
+                           .filter(Server.name != None\
+                                    and Server.name.like(likeString))\
+                           .all()
+
         return render('/servers.mako')
+

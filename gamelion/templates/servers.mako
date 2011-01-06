@@ -1,6 +1,12 @@
 <html>
 <title>Server List</title>
 <link rel="stylesheet" type="text/css" href="/style.css" />
+
+<form name="search_box" method="GET" />
+Search: <input type="text" name="search" />
+        <input type="submit" name="submit" value="Submit" />
+</form>
+
 <table id="servers">
 <tr>
     <th>Name</th>
