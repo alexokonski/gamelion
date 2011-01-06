@@ -17,8 +17,8 @@ class ServersController(BaseController):
             likeString = '%' + request.params['search'] + '%'
 
         c.servers = Session.query(Server)\
-                           .filter(Server.name != None\
-                                    and Server.name.like(likeString))\
+                           .filter(Server.name != None and 
+                                   Server.name.like(likeString))\
                            .all()
 
         return render('/servers.mako')
