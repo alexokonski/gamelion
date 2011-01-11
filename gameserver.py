@@ -51,16 +51,16 @@ if __name__ == "__main__":
 
     while len(queries) > 0:
         # send a few outstanding queries
-        now = time.time()
-        queries_to_send = filter(lambda q: now - q.time > TIMEOUT and \
-                                 q.times_sent < MAX_ATTEMPTS, queries)
-
-        queries_under_max = filter(lambda q: q.times_sent < MAX_ATTEMPTS, \
+        queries_under_max = filter(lambda q: q.times_sent < MAX_ATTEMPTS,
                                     queries)
         if len(queries_under_max) == 0:
             print len(queries), "queries didn't make it"
             break
-        
+
+        now = time.time()
+        queries_to_send = filter(lambda q: now - q.time > TIMEOUT,
+                                 queries_under_max)
+
         for query in queries_to_send[:5]: # only send a few at a time
             query.send(sock)
 
@@ -78,6 +78,7 @@ if __name__ == "__main__":
                 if query.server.address == addr and query.server.port == port:
                     query_complete = query.process_response(data)
                     if query_complete:
+                        print 'queries left:', len(queries)
                         queries.remove(query)
                     break
 
