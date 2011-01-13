@@ -49,7 +49,6 @@ def receive_response():
     response = ''
     try:
         (response, address) = query_socket.recvfrom(2048)
-        logging.debug('SOCKNAME: %s', str(query_socket.getsockname()))
     except socket.timeout:
         logging.debug('TIMEOUT')
         response = ''
@@ -101,7 +100,7 @@ def run_full_query(server_address):
 
     i = 0
     # get all the ips the master server wishes to give us
-    while i < MAX_ITERATIONS and (len(servers) <= 1 or 
+    while i < MAX_ITERATIONS and (len(servers) <= 1 or
                                   previous_server != DEFAULT_IP):
 
         logging.debug('')
@@ -120,8 +119,18 @@ def run_full_query(server_address):
         
         if len(response_servers) > 0 and\
            response_servers[-1] not in servers:
+            # We just got a list that (presumably) we haven't
+            # seen yet.  Grab the last one to use as the next 'seed'
             previous_server = response_servers[-1]
+
+            # Attempt to commit all the new ips to the database
+            logging.debug('ATTEMPTING TO ADD: %d', len(response_servers))
+            add_results_to_database(response_servers)
+    
+            # update our list of servers so we'll be able to know if 
+            # we get another new list
             servers.update(response_servers)
+
         elif len(response_servers) == 0:
             logging.debug('EMPTY response received')
         else:
@@ -131,27 +140,31 @@ def run_full_query(server_address):
         logging.debug('NUMBER OF SERVERS: %d', len(servers))
         logging.debug('-' * 60)
 
-        #time.sleep()
+        #time.sleep(2)
         i += 1
 
-    return servers
+    if i >= MAX_ITERATIONS:
+        return servers
 
-def add_results_to_database(server_list):
+def add_results_to_database(servers):
     """ Add a list of ips and ports to the database """
     
-    for ip, port in server_list:
+    i = 0
+    for ip, port in servers:
         exists_query = Session.query(Server)\
                               .filter(Server.address == ip)\
                               .filter(Server.port == port)\
                               .first()
 
         if not exists_query:
-            logging.debug('ADDING: %s:%d', ip, port)
+            i += 1
             server = Server()
             server.address = ip
             server.port = port
             Session.add(server)
-            Session.commit()
+    
+    Session.commit()
+    logging.debug('ACTUALLY ADDED: %d', i)
 
 def main():
     """ Query the master server and add the results to the database """
@@ -174,10 +187,7 @@ def main():
 
     # run through all the master servers we know of and ask them for ips
     for server_address in master_servers:
-        servers.update(run_full_query(server_address))
-
-    # add everything we got to the database
-    add_results_to_database(servers)
+        run_full_query()
 
 if __name__ == '__main__':
     main()

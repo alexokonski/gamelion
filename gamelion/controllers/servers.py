@@ -19,7 +19,9 @@ class ServersController(BaseController):
         c.servers = Session.query(Server)\
                            .filter(Server.name != None and 
                                    Server.name.like(likeString))\
+                           .order_by(Server.name)\
                            .all()
+
 
         return render('/servers.mako')
 
