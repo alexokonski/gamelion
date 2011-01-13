@@ -37,7 +37,6 @@ class GameServerQuery(object):
         # unpack the rest of the data
         server_info = struct.unpack('<cczzzzhcccccccz', response)
         self.server.name = unicode(server_info[2], encoding='latin_1')
-        Session.commit()
         return True
 
 # main loop
@@ -46,13 +45,14 @@ if __name__ == "__main__":
     MAX_ATTEMPTS = 5 # only try queries 5 times before we give up
 
     servers = Session.query(Server).all()
-    queries = map(lambda s: GameServerQuery(s), servers)
+    queries = map(lambda s: GameServerQuery(s), servers) 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     while len(queries) > 0:
         # send a few outstanding queries
         queries_under_max = filter(lambda q: q.times_sent < MAX_ATTEMPTS,
                                     queries)
+
         if len(queries_under_max) == 0:
             print len(queries), "queries didn't make it"
             break
@@ -61,7 +61,7 @@ if __name__ == "__main__":
         queries_to_send = filter(lambda q: now - q.time > TIMEOUT,
                                  queries_under_max)
 
-        for query in queries_to_send[:5]: # only send a few at a time
+        for query in queries_to_send[:10]: # only send a few at a time
             query.send(sock)
 
         # process response(s) if we got any (i.e. didn't time out)
@@ -81,6 +81,8 @@ if __name__ == "__main__":
                         print 'queries left:', len(queries)
                         queries.remove(query)
                     break
+
+        Session.commit()
 
         # sleep a little while to avoid overdoing it
         time.sleep(.1)
