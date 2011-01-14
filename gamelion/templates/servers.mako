@@ -4,22 +4,22 @@
 
 <form name="search_box" method="GET">
 Search: <input type="text" name="search" />
-        <input type="submit" name="submit" value="Submit" />
+        <input type="submit" value="Go"/>
 </form>
-
+<p>${c.paginator.pager()}</p>
 <table id="servers">
 <tr>
     <th>Name</th>
     <th>IP Address</th>
 </tr>
 <% isAlt = False %>
-% for server in c.servers:
+% for server in c.paginator:
     % if isAlt:
     <tr class="alt1">
     % else:
     <tr class="alt2">
     % endif
-        <td>${server.name}</td>
+        <td class="name">${server.name}</td>
         <td>${server.address}:${server.port}</td>
     </tr>
     <% isAlt = not isAlt %>

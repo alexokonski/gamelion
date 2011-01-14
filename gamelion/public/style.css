@@ -19,13 +19,39 @@
     background-color:#06705D;
     color:#ffffff;
 }
-#servers tr.alt1 td 
-{
-    color:#000000;
-    background-color:#B4F1DA;
-}
 #servers tr.alt2 td
 {
     color:#000000;
     background-color:#FFFFFF;
 }
+#servers tr.alt1 td 
+{
+    color:#000000;
+    background-color:#B4F1DA;
+}
+#servers td.name
+{
+    word-break:break-all;
+}
+.pager_link
+ {
+    color:#000000;
+    background-color: #e0e0e0;
+    text-decoration: none;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+}
+.pager_link:hover 
+{
+    text-decoration: none;
+    background-color: 1px
+}
+.pager_curpage 
+{
+    color: #ffffff;
+    background-color: #06705D;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    font-weight: bold;
+}
+
