@@ -6,10 +6,11 @@
 Search: <input type="text" name="search" />
         <input type="submit" value="Go"/>
 </form>
-<p>${c.paginator.pager()}</p>
+<p>${c.paginator.pager('~5~')}</p>
 <table id="servers">
 <tr>
     <th>Name</th>
+    <th>Game</th>
     <th>IP Address</th>
 </tr>
 <% isAlt = False %>
@@ -20,6 +21,7 @@ Search: <input type="text" name="search" />
     <tr class="alt2">
     % endif
         <td class="name">${server.name}</td>
+        <td>${server.app_name}</td>
         <td>${server.address}:${server.port}</td>
     </tr>
     <% isAlt = not isAlt %>

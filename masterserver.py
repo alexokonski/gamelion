@@ -156,7 +156,7 @@ def add_results_to_database(servers):
                               .filter(Server.port == port)\
                               .first()
 
-        if not exists_query:
+        if not exists_query and ip != '0.0.0.0':
             i += 1
             server = Server()
             server.address = ip
@@ -182,8 +182,6 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
     if not options.debug:
         logging.disable(logging.DEBUG)
-
-    servers = set()
 
     # run through all the master servers we know of and ask them for ips
     for server_address in master_servers:
