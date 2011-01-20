@@ -3,6 +3,7 @@
 data/
 *.swp
 *.db
+*.db-journal
 *.log
 *.egg
 *.backup
