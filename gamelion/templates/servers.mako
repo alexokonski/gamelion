@@ -1,3 +1,6 @@
+<%inherit file="/base.mako" />
+<%def name="title()">Servers</%def>
+
 <%def name="game_checkbox(app_id, num, game_name)">
     <span class="checkbox_group">
         <input type="checkbox" name="game-${num}" value=${app_id} />
@@ -5,10 +8,6 @@
     </span>
 </%def>
 
-<html>
-<title>Server List</title>
-<link rel="stylesheet" type="text/css" href="/style.css" />
-<body>
 <form name="search_form" method="GET">
 <p>
     Search: 
@@ -36,13 +35,11 @@
     % else:
     <tr class="alt2">
     % endif
-        <td class="name">${server.name}</td>
+        <td class="name"><a href="${url(controller='server', address=server.address + ':' + str(server.port))}">${server.name}</a></td>
         <td>${server.app_name}</td>
         <td>${server.address}:${server.port}</td>
     </tr>
     <% isAlt = not isAlt %>
 % endfor
 </table>
-</body>
-</html>
 
