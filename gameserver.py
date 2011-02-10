@@ -11,6 +11,7 @@ from gamelion.config.environment import load_environment
 from gamelion.model import *
 import logging
 from optparse import OptionParser
+from gamelion.lib.queryserver import *
 
 # set up the pylons environment
 conf = appconfig('config:development.ini', relative_to='.')
@@ -25,6 +26,7 @@ class GameServerQuery(object):
 
     def send(self, sock):
         data = struct.pack('<icz', -1, 'T', 'Source Engine Query')
+        #logging.debug('querying: %s %d', self.server.address, self.server.port)
         sock.sendto(data, (self.server.address, self.server.port))
         self.time = time.time()
         self.times_sent += 1
@@ -32,22 +34,21 @@ class GameServerQuery(object):
     def process_response(self, response):
         # get the message header to see if it's a split message or not
         # TODO: handle split responses
-        header, = struct.unpack('<i', response)
-        response = response[pystruct.calcsize('i'):]
-        assert header == -1
 
-        # unpack the rest of the data
-        _, _, name, _, _, title, app_id = struct.unpack('<cczzzzh', response)
-        self.server.name = unicode(name, encoding='latin_1')
-        self.server.app_id = app_id
+        info_response = InfoResponse(response)
+        info_response.fill_server(self.server)
 
         # if this app id doesn't exist, add it and use the game name
         # supplied in the response
-        if Session.query(Game).filter(Game.id == app_id).first() == None:
-            logging.debug('adding app id: %d, %s', app_id, title)
+        if Session.query(Game)\
+                  .filter(Game.id == info_response.app_id)\
+                  .first() == None:
+            logging.debug('adding app id: %d, %s', 
+                          info_response.app_id,
+                          info_response.description)
             game = Game()
-            game.id = app_id
-            game.name = unicode(title, encoding='latin_1')
+            game.id = info_response.app_id
+            game.name = unicode(info_response.description, encoding='latin_1')
             Session.add(game)
             Session.commit()
 

@@ -1,0 +1,15 @@
+#settings_left
+{
+    float:left;
+    width:25%;
+}
+#settings_right
+{
+    float:left;
+    width:25%;
+}
+#players_table
+{
+    width:50%;
+    clear:both;
+}

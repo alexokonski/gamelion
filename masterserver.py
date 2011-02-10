@@ -66,7 +66,7 @@ def unpack_response(response):
 
     ips = []
     entry_format = '!4sH'
-    header_format = '6s'
+    header_format = '!6s'
     entry_size = pystruct.calcsize(entry_format)
     header_size = pystruct.calcsize(header_format)
     offset = 0
@@ -185,7 +185,7 @@ def main():
 
     # run through all the master servers we know of and ask them for ips
     for server_address in master_servers:
-        run_full_query()
+        run_full_query(server_address)
 
 if __name__ == '__main__':
     main()

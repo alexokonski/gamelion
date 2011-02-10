@@ -8,6 +8,10 @@
     </span>
 </%def>
 
+<%def name="pager()">
+    <p>${c.paginator.pager('~5~')}</p>
+</%def>
+ 
 <form name="search_form" method="GET">
 <p>
     Search: 
@@ -21,7 +25,7 @@
     % endfor
 </p>
 </form>
-<p>${c.paginator.pager('~5~')}</p>
+${pager()}
 <table id="servers">
 <tr>
     <th>Name</th>
@@ -42,4 +46,5 @@
     <% isAlt = not isAlt %>
 % endfor
 </table>
+${pager()}
 
