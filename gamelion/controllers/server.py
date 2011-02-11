@@ -27,21 +27,23 @@ class ServerController(BaseController):
         except:
             abort(400)
 
+        c.server = Session.query(Server)\
+                          .filter(Server.address == ip)\
+                          .filter(Server.port == port)\
+                          .one()
+
         if 'json' in request.params:
             response.content_type = 'application/json'
 
             server_response = query_game_server(ip, port)
 
             if server_response != None:
+                server_response.fill_server(c.server)
+                Session.commit()
                 json_response = server_response.as_json_dict()
                 print json_response
                 return json.dumps(json_response)
             else:
                 return json.dumps({ 'success' : False })
-
-        c.server = Session.query(Server)\
-                          .filter(Server.address == ip)\
-                          .filter(Server.port == port)\
-                          .one()
 
         return render("/server.mako")

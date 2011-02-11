@@ -37,3 +37,29 @@ class Server(Base):
         else:
             return self._game.name
 
+    @synonym_for('is_secure')
+    @property
+    def is_secure_str(self):
+        if self.is_secure:
+            return 'Yes'
+        else:
+            return 'No'
+
+    @synonym_for('password_required')
+    @property 
+    def password_required_str(self):
+        if self.password_required:
+            return 'Yes'
+        else:
+            return 'No'
+
+    @synonym_for('operating_system')
+    @property
+    def operating_system_str(self):
+        if self.operating_system == 'l':
+            return 'Linux'
+        elif self.operating_system == 'w':
+            return 'Windows'
+        else:
+            return '?'
+

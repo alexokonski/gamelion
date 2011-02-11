@@ -14,9 +14,9 @@ $(function() {
         $("#refresh a").text('Refresh')
         $("#players").text(data.number_of_players + '/' + data.max_players);
         $("#map").text(data.map);
-        $("#password").text(data.password_required ? "Yes" : "No");
+        $("#password").text(data.password_required);
         $("#bots").text(data.number_of_bots);
-        $("#secure").text(data.is_secure ? "Yes" : "No");
+        $("#secure").text(data.is_secure);
         $("#version").text(data.version);
         $("#os").text(data.os);
 
@@ -25,22 +25,13 @@ $(function() {
         players = data.players
         for(i=0; i<players.length; i++)
         {
-            var time = players[i].time_connected;
-            var hours = Math.floor((time / 3600));
-            var minutes = Math.floor((time % 3600) / 60);
-            var seconds = Math.floor((time % 3600) % 60);
-
             obj = obj.append($("<tr>")
                         .append($("<td>")
                             .text(players[i].name)
                         ).append($("<td>")
                             .text(players[i].kills)
                         ).append($("<td>")
-                            .text(hours.toPrecision(2) + 
-                                    ":" + 
-                                    minutes.toPrecision(2) + 
-                                    ":" + 
-                                    seconds.toPrecision(2))
+                            .text(players[i].time_connected)
                         )
                      );
         }

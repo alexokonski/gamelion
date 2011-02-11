@@ -18,26 +18,18 @@ Players: <span id="players">${c.server.number_of_players}/${c.server.max_players
 </br>
 Map: <span id="map">${c.server.map}</span>
 </br>
-%if c.server.password_required:
-Password: <span id="password">Yes</span>
-%else:
-Password: <span id="password">No</span>
-%endif
+Password: <span id="password">${c.server.password_required_str}</span>
 </p>
 </div>
 <div id="settings_right">
 <p>
 Number of bots: <span id="bots">${c.server.number_of_bots}</span>
 </br>
-%if c.server.is_secure:
-Secure: <span id="secure">Yes</span>
-%else:
-Secure: <span id="secure">No</span>
-%endif
+Secure: <span id="secure">${c.server.is_secure_str}</span>
 </br>
 Version: <span id="version">${c.server.version}</span>
 </br>
-OS: <span id="os">${c.server.operating_system}</span>
+OS: <span id="os">${c.server.operating_system_str}</span>
 </p>
 </div>
 

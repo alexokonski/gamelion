@@ -2,6 +2,7 @@ import socket
 import struct as pystruct
 import gamelion.lib.stringz as struct
 import logging
+from datetime import time
 
 class ServerPlayer(object):
     def __init__(self, name, kills, time_connected):
@@ -10,10 +11,39 @@ class ServerPlayer(object):
         self.time_connected = time_connected
     
     def as_json_dict(self):
-        return {
+
+        # http://darklaunch.com/2009/10/06/python-time-duration-human-friendly-timestamp
+        def get_time_string(seconds):
+            seconds = long(round(seconds))
+            minutes, seconds = divmod(seconds, 60)
+            hours, minutes = divmod(minutes, 60)
+            days, hours = divmod(hours, 24)
+            years, days = divmod(days, 365.242199)
+         
+            minutes = long(minutes)
+            hours = long(hours)
+            days = long(days)
+            years = long(years)
+         
+            duration = []
+            if years > 0:
+                duration.append('%d year' % years + 's'*(years != 1))
+            else:
+                if days > 0:
+                    duration.append('%d day' % days + 's'*(days != 1))
+                if hours > 0:
+                    duration.append('%d hour' % hours + 's'*(hours != 1))
+                if minutes > 0:
+                    duration.append('%d minute' % minutes + 's'*(minutes != 1))
+                if seconds > 0:
+                    duration.append('%d second' % seconds + 's'*(seconds != 1))
+
+            return ' '.join(duration)
+
+        return { 
             'name'           : self.name,
             'kills'          : self.kills,
-            'time_connected' : self.time_connected
+            'time_connected' : get_time_string(self.time_connected)
         }
 
 class InfoResponse(object):
@@ -52,7 +82,7 @@ class InfoResponse(object):
         server.operating_system = self.operating_system
         server.password_required = self.password_required
         server.is_secure = self.is_secure
-        server.version = self.version
+        server.version = unicode(self.version, encoding='latin_1')
 
 class PlayerResponse(object):
     def __init__(self, player_response):
@@ -86,19 +116,34 @@ class QueryResult(object):
         self._player_response = PlayerResponse(player_response)
 
     def as_json_dict(self):
+        is_secure = 'No'
+        if self._info_response.is_secure:
+            is_secure = 'Yes'
+
+        password_required = 'No'
+        if self._info_response.password_required:
+            password_required = 'Yes'
+
+        operating_system = 'Linux'
+        if self._info_response.operating_system == 'w':
+            operating_system = 'Windows'
+
         return {
             'map'               : self._info_response.map,
             'number_of_players' : self._info_response.number_of_players,
             'max_players'       : self._info_response.max_players,
             'number_of_bots'    : self._info_response.number_of_bots,
             'is_dedicated'      : self._info_response.is_dedicated,
-            'os'                : self._info_response.operating_system,
-            'password_required' : self._info_response.password_required,
-            'is_secure'         : self._info_response.is_secure,
+            'os'                : operating_system,
+            'password_required' : password_required,
+            'is_secure'         : is_secure,
             'version'           : self._info_response.version,
             'players'           :
                 [p.as_json_dict() for p in self._player_response.players]
         }
+
+    def fill_server(self, server):
+        self._info_response.fill_server(server)
 
 def try_query(ip, port, data):
     MAX_RETRIES = 3

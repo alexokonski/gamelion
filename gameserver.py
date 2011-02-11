@@ -11,7 +11,8 @@ from gamelion.config.environment import load_environment
 from gamelion.model import *
 import logging
 from optparse import OptionParser
-from gamelion.lib.queryserver import *
+import gamelion.lib.queryserver as QueryServer
+from sqlalchemy.sql.expression import func
 
 # set up the pylons environment
 conf = appconfig('config:development.ini', relative_to='.')
@@ -35,7 +36,13 @@ class GameServerQuery(object):
         # get the message header to see if it's a split message or not
         # TODO: handle split responses
 
-        info_response = InfoResponse(response)
+        info_response = QueryServer.InfoResponse(response)
+        
+        if self.server.name == None:
+            logging.debug('ADDING SERVER: %s', info_response.name)
+        else:
+            logging.debug('UPDATING SERVER: %s', info_response.name)
+        
         info_response.fill_server(self.server)
 
         # if this app id doesn't exist, add it and use the game name
@@ -55,7 +62,7 @@ class GameServerQuery(object):
         return True
 
 # main loop
-def query_servers(query_found_only):
+def query_servers(query_found_only, query_in_random_order):
     TIMEOUT = 3 # seconds
     MAX_ATTEMPTS = 5 # only try queries 5 times before we give up
 
@@ -64,10 +71,14 @@ def query_servers(query_found_only):
     if query_found_only:
         # only get servers with a name already filled in
         server_query = server_query.filter(Server.name != None)
+
+    if query_in_random_order:
+        # query servers in a random order 
+        server_query = server_query.order_by(func.random())
     else:
         # query un-queried servers first
         server_query = server_query.order_by(Server.name != None)
-        
+
     servers = server_query.all()
     queries = map(lambda s: GameServerQuery(s), servers) 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -103,7 +114,6 @@ def query_servers(query_found_only):
                    query.server.port == port:
                     query_complete = query.process_response(data)
                     if query_complete:
-                        logging.debug('queries left: %d', len(queries))
                         queries.remove(query)
                     break
 
@@ -123,6 +133,10 @@ if __name__ == "__main__":
                       default=False, 
                       help='only query servers that have already responded\
                             at least once (that is, they have a name)')
+    parser.add_option('-r', '--random',
+                      action='store_true', dest='query_in_random_order',
+                      default=False,
+                      help='query servers in random order.  Can be combined with -f')
 
     (options, args) = parser.parse_args()
 
@@ -133,5 +147,5 @@ if __name__ == "__main__":
     if not options.debug:
         logging.disable(logging.DEBUG)
 
-    query_servers(options.query_found_only)
+    query_servers(options.query_found_only, options.query_in_random_order)
 
