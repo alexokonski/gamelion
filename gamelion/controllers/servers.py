@@ -36,20 +36,27 @@ class ServersController(BaseController):
                          .filter(Server.name.like(likeString))\
                          .order_by(Server.name)
 
-        app_ids = self.form_result['game']
+        filtered_app_ids = self.form_result['game']
 
         # restrict the query to certain games (if applicable)
-        if len(app_ids) > 0:
-            serverQuery = serverQuery.filter(Server.app_id.in_(app_ids))
+        if len(filtered_app_ids) > 0:
+            serverQuery = serverQuery.filter(Server.app_id.in_(filtered_app_ids))
+        else:
+            serverQuery = serverQuery\
+                            .filter(Server.app_id.in_(get_primary_app_ids().keys() +
+                                                      get_secondary_app_ids().keys()))
 
-        # checkboxes will be generated from this list
-        c.app_ids = GetValidAppIds() 
+        # default revealed checkboxes will be generated from this list
+        c.primary_app_ids = get_primary_app_ids()
+
+        # default hidden chexboxes will be generated from this list
+        c.secondary_app_ids = get_secondary_app_ids()
 
         # make sure the paginator links have the currently filtered
         # games in them
         kwargs = {}
         i = 0
-        for id in c.app_ids:
+        for id in c.primary_app_ids:
             param_name = 'game-%d' % i
             if param_name in request.params:
                 kwargs[param_name] = id

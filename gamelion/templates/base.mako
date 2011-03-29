@@ -9,8 +9,6 @@
     ${self.scripts()}
 </head>
 <body>
-<h1>${self.title()}</h1>
-
 ${self.body()}
 </body>
 </html>

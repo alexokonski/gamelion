@@ -1,10 +1,11 @@
-p
+*
 {
     font-family:"Trebuchet MS", Arial, Helvetica, sans-serif;
 }
 .text_input
 {
     border: 2px solid #06705D;
+    width: 25%;
 }
 .button
 {

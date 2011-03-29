@@ -71,6 +71,9 @@ class InfoResponse(object):
             self.version,\
                     = struct.unpack('<cczzzzhBBBccBBz', info_response)
 
+            if len(self.name) == 0:
+                self.name = '__NO_NAME__'
+
     def fill_server(self, server):
         server.name = unicode(self.name, encoding='latin_1')
         server.map = unicode(self.map, encoding='latin_1')
@@ -187,8 +190,6 @@ def query_game_server(ip, port):
 
         player_query = pack_player_query(challenge)
         player_response = try_query(ip, port, player_query)
-        print 'challenge_response:', repr(challenge_response)
-        print 'player_response:', repr(player_response)
 
     if player_response == None and info_response == None:
         return None

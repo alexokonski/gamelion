@@ -65,7 +65,7 @@ class GameServerQuery(object):
 def query_servers(query_found_only, query_in_random_order):
     TIMEOUT = 3 # seconds
     MAX_ATTEMPTS = 5 # only try queries 5 times before we give up
-
+    
     server_query = Session.query(Server)
     
     if query_found_only:

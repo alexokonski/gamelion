@@ -41,7 +41,6 @@ class ServerController(BaseController):
                 server_response.fill_server(c.server)
                 Session.commit()
                 json_response = server_response.as_json_dict()
-                print json_response
                 return json.dumps(json_response)
             else:
                 return json.dumps({ 'success' : False })

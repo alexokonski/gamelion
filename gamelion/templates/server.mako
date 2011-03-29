@@ -6,8 +6,9 @@
     <script type="text/javascript" src="/server.js"></script>
 </%def>
 
+<h1>${c.server.name}</h1>
+<a href="/">Home</a>
 <div id="refresh"></div>
-
 <div id="settings_left">
 <p>
 IP: ${c.server.address}:${c.server.port}
