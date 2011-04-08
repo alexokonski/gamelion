@@ -6,5 +6,7 @@ data/
 *.db-journal
 *.log
 *.egg
+*.egg-info
+srv/
 *.backup
 nohup.out

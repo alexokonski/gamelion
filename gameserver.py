@@ -65,7 +65,10 @@ class GameServerQuery(object):
 def query_servers(query_found_only, query_in_random_order):
     TIMEOUT = 3 # seconds
     MAX_ATTEMPTS = 5 # only try queries 5 times before we give up
-    
+
+    # number of complete queries required before they are committed (for speed) 
+    COMPLETE_QUERIES_REQUIRED = 10
+
     server_query = Session.query(Server)
     
     if query_found_only:
@@ -79,14 +82,23 @@ def query_servers(query_found_only, query_in_random_order):
         # query un-queried servers first
         server_query = server_query.order_by(Server.name != None)
 
+    logging.debug("querying db")
     servers = server_query.all()
-    queries = map(lambda s: GameServerQuery(s), servers) 
+
+    queries = {}
+    for server in servers:
+        queries[(server.address, server.port)] = GameServerQuery(server)
+
+    #queries = map(lambda s: GameServerQuery(s), servers) 
+    
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    logging.debug("query and socket complete")
+    complete_queries = 0
 
     while len(queries) > 0:
         # send a few outstanding queries
         queries_under_max = filter(lambda q: q.times_sent < MAX_ATTEMPTS,
-                                    queries)
+                                    queries.values())
 
         if len(queries_under_max) == 0:
             logging.debug("%d queries didn't make it", len(queries))
@@ -101,7 +113,9 @@ def query_servers(query_found_only, query_in_random_order):
 
         # process response(s) if we got any (i.e. didn't time out)
         while True:
+            logging.debug('startloop')
             readable, _, _ = select.select([sock], [], [], 0)
+            logging.debug('select finished')
 
             if len(readable) == 0:
                 break
@@ -109,18 +123,41 @@ def query_servers(query_found_only, query_in_random_order):
             data, source = sock.recvfrom(2048)
             addr, port = source
 
+            logging.debug('recv finished')
+
+            '''i = 0
+            qlen = len(queries)
             for query in queries:
+                logging.debug('query %d of %d', i, qlen)
+                i += 1
                 if query.server.address == addr and\
                    query.server.port == port:
                     query_complete = query.process_response(data)
                     if query_complete:
                         queries.remove(query)
-                    break
+                    break'''
 
-        Session.commit()
+            if source in queries:
+                query_complete = queries[source].process_response(data)
+                if query_complete:
+                    complete_queries += 1
+                    del queries[source]
+                break
+
+            logging.debug('loop1')
+
+        if complete_queries >= COMPLETE_QUERIES_REQUIRED:
+            logging.debug('committing')
+            Session.commit()
+            logging.debug('committed')
+            complete_queries = 0
 
         # sleep a little while to avoid overdoing it
-        time.sleep(.1)
+        time.sleep(1)
+        logging.debug('loop2')
+    
+    # commit any outstanding completed queries
+    Session.commit()
 
 if __name__ == "__main__":
     usage = 'usage: gameserver.py [options]'
