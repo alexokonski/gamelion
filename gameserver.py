@@ -82,8 +82,9 @@ def query_servers(query_found_only, query_in_random_order):
         # query un-queried servers first
         server_query = server_query.order_by(Server.name != None)
 
-    logging.debug("querying db")
+    logging.debug('RUNNING QUERY')
     servers = server_query.all()
+    logging.debug('QUERY COMPLETE')
 
     queries = {}
     for server in servers:
@@ -92,9 +93,8 @@ def query_servers(query_found_only, query_in_random_order):
     #queries = map(lambda s: GameServerQuery(s), servers) 
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    logging.debug("query and socket complete")
+    
     complete_queries = 0
-
     while len(queries) > 0:
         # send a few outstanding queries
         queries_under_max = filter(lambda q: q.times_sent < MAX_ATTEMPTS,
@@ -113,29 +113,13 @@ def query_servers(query_found_only, query_in_random_order):
 
         # process response(s) if we got any (i.e. didn't time out)
         while True:
-            logging.debug('startloop')
             readable, _, _ = select.select([sock], [], [], 0)
-            logging.debug('select finished')
 
             if len(readable) == 0:
                 break
 
             data, source = sock.recvfrom(2048)
             addr, port = source
-
-            logging.debug('recv finished')
-
-            '''i = 0
-            qlen = len(queries)
-            for query in queries:
-                logging.debug('query %d of %d', i, qlen)
-                i += 1
-                if query.server.address == addr and\
-                   query.server.port == port:
-                    query_complete = query.process_response(data)
-                    if query_complete:
-                        queries.remove(query)
-                    break'''
 
             if source in queries:
                 query_complete = queries[source].process_response(data)
@@ -144,17 +128,14 @@ def query_servers(query_found_only, query_in_random_order):
                     del queries[source]
                 break
 
-            logging.debug('loop1')
-
         if complete_queries >= COMPLETE_QUERIES_REQUIRED:
-            logging.debug('committing')
+            logging.debug('COMMITTING')
             Session.commit()
-            logging.debug('committed')
+            logging.debug('COMMIT COMPLETE')
             complete_queries = 0
 
         # sleep a little while to avoid overdoing it
         time.sleep(1)
-        logging.debug('loop2')
     
     # commit any outstanding completed queries
     Session.commit()
