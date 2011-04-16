@@ -53,6 +53,13 @@ class InfoResponse(object):
             info_response = info_response[pystruct.calcsize('<i'):]
             assert header == -1
 
+            type, = struct.unpack('<c', info_response)
+
+            #if this is a different kind of response, leave
+            if type != 'I':
+                logging.debug('INVALID PACKET, HEADER BYTE: %s', type)
+                raise Exception('INVALID PACKET, HEADER BYTE: %s' % (type,))
+
             # unpack the info response
             _,\
             _,\
@@ -83,8 +90,17 @@ class InfoResponse(object):
         server.number_of_bots = self.number_of_bots
         server.is_dedicated = self.is_dedicated
         server.operating_system = self.operating_system
-        server.password_required = self.password_required
-        server.is_secure = self.is_secure
+
+        if self.password_required == 0:
+            server.password_required = False
+        else:
+            server.password_required = True
+
+        if self.is_secure == 0:
+            server.is_secure = False
+        else:
+            server.is_secure = True
+
         server.version = unicode(self.version, encoding='latin_1')
 
 class PlayerResponse(object):
@@ -151,7 +167,7 @@ class QueryResult(object):
 def try_query(ip, port, data):
     MAX_RETRIES = 3
     query_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    query_socket.settimeout(2.0)
+    query_socket.settimeout(5.0)
     
     retries = 0
     response = None 

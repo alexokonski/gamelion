@@ -23,11 +23,12 @@ import socket
 import time
 import logging
 from optparse import OptionParser
+from amqplib import client_0_8 as amqp
 
 master_servers = [ ('hl2master.steampowered.com', 27011) ]
 
 query_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-query_socket.settimeout(0.5)
+query_socket.settimeout(1.0)
 
 def pack_query(region, ip_port, filter):
     """ Pack a Master Server Query """
@@ -93,10 +94,20 @@ def run_full_query(server_address):
     """ Run a full master server query """
     
     DEFAULT_IP = ('0.0.0.0', 0)
-    MAX_ITERATIONS = 1000
+    MAX_ITERATIONS = 10000
 
     servers = set()
     previous_server = DEFAULT_IP
+
+    amqp_connection = amqp.Connection(
+        host='localhost:5672', 
+        userid='alex', 
+        password='alex',
+        virtual_host='/',
+        insist=False
+    )
+
+    amqp_channel = amqp_connection.channel()
 
     i = 0
     # get all the ips the master server wishes to give us
@@ -108,7 +119,8 @@ def run_full_query(server_address):
 
         # get a string for the last ip the server sent us
         server_string = '%s:%d' % (previous_server)
-        query_data = pack_query(0xFF, server_string, r'\napp\500')
+        query_data = pack_query(0xFF, server_string, r'\napp\500\napp\550')
+        print repr(query_data)
 
         # Tell the server we'd like some data
         query_server(server_address, query_data)
@@ -124,9 +136,24 @@ def run_full_query(server_address):
             previous_server = response_servers[-1]
 
             # Attempt to commit all the new ips to the database
-            logging.debug('ATTEMPTING TO ADD: %d', len(response_servers))
-            add_results_to_database(response_servers)
+            #logging.debug('ATTEMPTING TO ADD: %d', len(response_servers))
+            #add_results_to_database(response_servers)
     
+            # add these servers to the queue
+            for ip, port in response_servers:
+                logging.debug('SENDING %s, %d', ip, port)
+                message = amqp.Message()
+                message.properties['application_headers'] = { 
+                    'ip': ip, 
+                    'port': port 
+                }
+                message.properties['delivery_mode'] = 1
+                amqp_channel.basic_publish(
+                    message, 
+                    exchange='gamelion_servers', 
+                    routing_key='gamelion'
+                )
+
             # update our list of servers so we'll be able to know if 
             # we get another new list
             servers.update(response_servers)
@@ -140,31 +167,10 @@ def run_full_query(server_address):
         logging.debug('NUMBER OF SERVERS: %d', len(servers))
         logging.debug('-' * 60)
 
-        #time.sleep(2)
         i += 1
 
-    if i >= MAX_ITERATIONS:
-        return servers
-
-def add_results_to_database(servers):
-    """ Add a list of ips and ports to the database """
-    
-    i = 0
-    for ip, port in servers:
-        exists_query = Session.query(Server)\
-                              .filter(Server.address == ip)\
-                              .filter(Server.port == port)\
-                              .first()
-
-        if not exists_query and ip != '0.0.0.0':
-            i += 1
-            server = Server()
-            server.address = ip
-            server.port = port
-            Session.add(server)
-    
-    Session.commit()
-    logging.debug('ACTUALLY ADDED: %d', i)
+    amqp_channel.close()
+    amqp_connection.close()
 
 def main():
     """ Query the master server and add the results to the database """

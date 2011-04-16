@@ -46,7 +46,7 @@ $(function() {
         success: function (data, textStatus, request) {
             process_success(data);
         },
-        timeout: 7000,
+        timeout: 20000,
         type: 'GET',
         url: '?json=1'
     });

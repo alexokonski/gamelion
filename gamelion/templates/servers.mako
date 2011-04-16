@@ -33,7 +33,6 @@
     % endfor
     </div>
     <div class="secondary_checkboxes">
-    <% i = 0 %>
     % for id in c.secondary_app_ids:
         ${game_checkbox(id, i, c.secondary_app_ids[id])}  
         <% i += 1 %>
@@ -57,7 +56,7 @@ ${pager()}
     % else:
     <tr class="alt2">
     % endif
-        <td class="name"><a href="${url(controller='server', address=server.address + ':' + str(server.port))}">${server.name}</a></td>
+        <td class="name"><a href="${url(controller='server', address=server.address + ':' + str(server.port))}">${unicode(server.name, encoding='latin_1')}</a></td>
         <td>${server.app_name}</td>
         <td>${server.address}:${server.port}</td>
     </tr>

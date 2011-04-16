@@ -35,7 +35,7 @@ class GameServerQuery(object):
     def process_response(self, response):
         # get the message header to see if it's a split message or not
         # TODO: handle split responses
-
+        
         info_response = QueryServer.InfoResponse(response)
         
         if self.server.name == None:
@@ -43,14 +43,12 @@ class GameServerQuery(object):
         else:
             logging.debug('UPDATING SERVER: %s', info_response.name)
         
-        info_response.fill_server(self.server)
-
         # if this app id doesn't exist, add it and use the game name
         # supplied in the response
         if Session.query(Game)\
                   .filter(Game.id == info_response.app_id)\
                   .first() == None:
-            logging.debug('adding app id: %d, %s', 
+            logging.debug('ADDING APP ID: %d, %s', 
                           info_response.app_id,
                           info_response.description)
             game = Game()
@@ -59,10 +57,12 @@ class GameServerQuery(object):
             Session.add(game)
             Session.commit()
 
+        info_response.fill_server(self.server)
+        
         return True
 
 # main loop
-def query_servers(query_found_only, query_in_random_order):
+def query_servers(query_found_only, query_in_random_order, address):
     TIMEOUT = 3 # seconds
     MAX_ATTEMPTS = 5 # only try queries 5 times before we give up
 
@@ -71,24 +71,32 @@ def query_servers(query_found_only, query_in_random_order):
 
     server_query = Session.query(Server)
     
-    if query_found_only:
-        # only get servers with a name already filled in
-        server_query = server_query.filter(Server.name != None)
-
-    if query_in_random_order:
-        # query servers in a random order 
-        server_query = server_query.order_by(func.random())
+    if address != None:
+        (ip, port) = address.split(':')
+        server_query = server_query.filter(Server.address == ip)\
+                                   .filter( Server.port == port)
     else:
-        # query un-queried servers first
-        server_query = server_query.order_by(Server.name != None)
+        if query_found_only:
+            # only get servers with a name already filled in
+            server_query = server_query.filter(Server.name != None)
+
+        if query_in_random_order:
+            # query servers in a random order 
+            server_query = server_query.order_by(func.random())
+        else:
+            # query un-queried servers first
+            server_query = server_query.order_by(Server.name != None)
 
     logging.debug('RUNNING QUERY')
     servers = server_query.all()
+    logging.debug('GOT %d SERVERS', len(servers))
     logging.debug('QUERY COMPLETE')
 
+    logging.debug('GENERATING DICT')
     queries = {}
     for server in servers:
         queries[(server.address, server.port)] = GameServerQuery(server)
+    logging.debug('DICT GENERATED')
 
     #queries = map(lambda s: GameServerQuery(s), servers) 
     
@@ -108,12 +116,14 @@ def query_servers(query_found_only, query_in_random_order):
         queries_to_send = filter(lambda q: now - q.time > TIMEOUT,
                                  queries_under_max)
 
-        for query in queries_to_send[:10]: # only send a few at a time
+        for query in queries_to_send[:5]: # only send a few at a time
             query.send(sock)
 
         # process response(s) if we got any (i.e. didn't time out)
         while True:
-            readable, _, _ = select.select([sock], [], [], 0)
+            logging.debug('SELECTING')
+            readable, _, _ = select.select([sock], [], [], TIMEOUT)
+            logging.debug('SELECT FINISHED')
 
             if len(readable) == 0:
                 break
@@ -122,6 +132,7 @@ def query_servers(query_found_only, query_in_random_order):
             addr, port = source
 
             if source in queries:
+                logging.debug('PROCESSING QUERY FROM %s', str(source))
                 query_complete = queries[source].process_response(data)
                 if query_complete:
                     complete_queries += 1
@@ -130,7 +141,7 @@ def query_servers(query_found_only, query_in_random_order):
 
         if complete_queries >= COMPLETE_QUERIES_REQUIRED:
             logging.debug('COMMITTING')
-            Session.commit()
+            #Session.commit()
             logging.debug('COMMIT COMPLETE')
             complete_queries = 0
 
@@ -156,6 +167,10 @@ if __name__ == "__main__":
                       default=False,
                       help='query servers in random order.  Can be combined with -f')
 
+    parser.add_option('-a', '--address',
+                      action='store', dest='address', type="string",
+                      help='address to query, in form ip:port')
+
     (options, args) = parser.parse_args()
 
     if len(args) != 0:
@@ -165,5 +180,7 @@ if __name__ == "__main__":
     if not options.debug:
         logging.disable(logging.DEBUG)
 
-    query_servers(options.query_found_only, options.query_in_random_order)
+    query_servers(options.query_found_only, 
+                  options.query_in_random_order, 
+                  options.address)
 
