@@ -12,36 +12,44 @@ from gamelion.model import *
 import logging
 from optparse import OptionParser
 import gamelion.lib.queryserver as QueryServer
-from sqlalchemy.sql.expression import func
+from kombu.connection import BrokerConnection
+from kombu.messaging import Queue, Exchange, Consumer
 
 # set up the pylons environment
-conf = appconfig('config:development.ini', relative_to='.')
+conf = appconfig('config:amazon.ini', relative_to='.')
 load_environment(conf.global_conf, conf.local_conf)
+
+# globals
+query_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server_buffer = {}
+display_waiting = True
+
+QUERY_CHUNK_SIZE = 20 
+MAX_BUFFER_SIZE = 100
+CONSUME_TIMEOUT = 10
+
 
 # define a query
 class GameServerQuery(object):
-    def __init__(self, server):
-        self.server = server
-        self.time = 0
+    def __init__(self, address, port):
+        self.address = address
+        self.port = port
         self.times_sent = 0
 
     def send(self, sock):
         data = struct.pack('<icz', -1, 'T', 'Source Engine Query')
-        #logging.debug('querying: %s %d', self.server.address, self.server.port)
-        sock.sendto(data, (self.server.address, self.server.port))
-        self.time = time.time()
+        sock.sendto(data, (self.address, self.port))
         self.times_sent += 1
 
     def process_response(self, response):
         # get the message header to see if it's a split message or not
         # TODO: handle split responses
-        
-        info_response = QueryServer.InfoResponse(response)
-        
-        if self.server.name == None:
-            logging.debug('ADDING SERVER: %s', info_response.name)
-        else:
-            logging.debug('UPDATING SERVER: %s', info_response.name)
+       
+        try:
+            info_response = QueryServer.InfoResponse(response)
+        except Exception as e:
+            logging.debug(str(e))
+            return False
         
         # if this app id doesn't exist, add it and use the game name
         # supplied in the response
@@ -53,134 +61,120 @@ class GameServerQuery(object):
                           info_response.description)
             game = Game()
             game.id = info_response.app_id
-            game.name = unicode(info_response.description, encoding='latin_1')
+            game.name = unicode(
+                info_response.description, 
+                encoding='latin_1'
+            )
             Session.add(game)
             Session.commit()
 
-        info_response.fill_server(self.server)
-        
+        server = Server()
+        server.address = self.address
+        server.port = self.port
+
+        # fill in the rest of the response data
+        info_response.fill_server(server)
+        server = Session.merge(server)
+        Session.add(server)
+
         return True
 
-# main loop
-def query_servers(query_found_only, query_in_random_order, address):
-    TIMEOUT = 3 # seconds
-    MAX_ATTEMPTS = 5 # only try queries 5 times before we give up
+def process_servers():
+    TIMEOUT = 2 
+    MAX_ATTEMPTS = 3 
+    global server_buffer
 
-    # number of complete queries required before they are committed (for speed) 
-    COMPLETE_QUERIES_REQUIRED = 10
+    before = len(server_buffer)
+    before_time = time.time()
+    timeouts = 0
 
-    server_query = Session.query(Server)
-    
-    if address != None:
-        (ip, port) = address.split(':')
-        server_query = server_query.filter(Server.address == ip)\
-                                   .filter( Server.port == port)
-    else:
-        if query_found_only:
-            # only get servers with a name already filled in
-            server_query = server_query.filter(Server.name != None)
+    while len(server_buffer) > 0:
+        queries_to_send = server_buffer.values()
 
-        if query_in_random_order:
-            # query servers in a random order 
-            server_query = server_query.order_by(func.random())
-        else:
-            # query un-queried servers first
-            server_query = server_query.order_by(Server.name != None)
-
-    logging.debug('RUNNING QUERY')
-    servers = server_query.all()
-    logging.debug('GOT %d SERVERS', len(servers))
-    logging.debug('QUERY COMPLETE')
-
-    logging.debug('GENERATING DICT')
-    queries = {}
-    for server in servers:
-        queries[(server.address, server.port)] = GameServerQuery(server)
-    logging.debug('DICT GENERATED')
-
-    #queries = map(lambda s: GameServerQuery(s), servers) 
-    
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    
-    complete_queries = 0
-    while len(queries) > 0:
-        # send a few outstanding queries
-        queries_under_max = filter(lambda q: q.times_sent < MAX_ATTEMPTS,
-                                    queries.values())
-
-        if len(queries_under_max) == 0:
-            logging.debug("%d queries didn't make it", len(queries))
-            break
-
-        now = time.time()
-        queries_to_send = filter(lambda q: now - q.time > TIMEOUT,
-                                 queries_under_max)
-
-        for query in queries_to_send[:5]: # only send a few at a time
-            query.send(sock)
+        for query in queries_to_send[:QUERY_CHUNK_SIZE]:
+            if query.times_sent > MAX_ATTEMPTS:
+                #logging.debug(
+                #    'GIVING UP ON %s:%d, TIMED OUT %d TIMES', 
+                #    query.address, 
+                #    query.port, 
+                #    MAX_ATTEMPTS
+                #)
+                timeouts += 1
+                del server_buffer[(query.address, query.port)]
+            else:
+                query.send(query_socket)
 
         # process response(s) if we got any (i.e. didn't time out)
         while True:
-            logging.debug('SELECTING')
-            readable, _, _ = select.select([sock], [], [], TIMEOUT)
-            logging.debug('SELECT FINISHED')
+            readable, _, _ = select.select([query_socket], [], [], TIMEOUT)
 
             if len(readable) == 0:
                 break
 
-            data, source = sock.recvfrom(2048)
+            data, source = query_socket.recvfrom(2048)
             addr, port = source
 
-            if source in queries:
-                logging.debug('PROCESSING QUERY FROM %s', str(source))
-                query_complete = queries[source].process_response(data)
+            if source in server_buffer:
+                query_object = server_buffer[source]
+                query_complete = query_object.process_response(data)
                 if query_complete:
-                    complete_queries += 1
-                    del queries[source]
-                break
-
-        if complete_queries >= COMPLETE_QUERIES_REQUIRED:
-            logging.debug('COMMITTING')
-            #Session.commit()
-            logging.debug('COMMIT COMPLETE')
-            complete_queries = 0
-
-        # sleep a little while to avoid overdoing it
-        time.sleep(1)
+                    del server_buffer[source]
     
-    # commit any outstanding completed queries
+    # commit completed queries
     Session.commit()
+    after_time = time.time()
+    after = len(server_buffer)
+    logging.debug(
+        'QUERIED %d SERVERS (%d TIME OUTS), TOOK %f SECONDS', 
+        before - after,
+        timeouts,
+        after_time - before_time
+    )
+
+
+def receive_message(body, message):
+    global display_waiting
+    global server_buffer
+    display_waiting = True
+
+    (ip, port) = body.split(':')
+    port = int(port)
+    server_buffer[(ip, port)] = GameServerQuery(ip, port)
+
+    if len(server_buffer) > MAX_BUFFER_SIZE:
+        process_servers()
+        after = len(server_buffer)
 
 if __name__ == "__main__":
-    usage = 'usage: gameserver.py [options]'
-    parser = OptionParser(usage)
-    parser.add_option('-d', '--debug',
-                      action='store_true', dest='debug', default=False,
-                      help='enable debug messages')
-    parser.add_option('-f', '--query-found-only',
-                      action='store_true', dest='query_found_only', 
-                      default=False, 
-                      help='only query servers that have already responded\
-                            at least once (that is, they have a name)')
-    parser.add_option('-r', '--random',
-                      action='store_true', dest='query_in_random_order',
-                      default=False,
-                      help='query servers in random order.  Can be combined with -f')
-
-    parser.add_option('-a', '--address',
-                      action='store', dest='address', type="string",
-                      help='address to query, in form ip:port')
-
-    (options, args) = parser.parse_args()
-
-    if len(args) != 0:
-        parser.error('incorrect number of arguments')
-
+    
     logging.basicConfig(level=logging.DEBUG)
-    if not options.debug:
-        logging.disable(logging.DEBUG)
 
-    query_servers(options.query_found_only, 
-                  options.query_in_random_order, 
-                  options.address)
+    server_exchange = Exchange('servers', type='fanout')
+    server_queue = Queue('servers', exchange=server_exchange)
 
+    connection = BrokerConnection(
+        hostname='localhost',
+        userid='alex',
+        password='alex',
+        virtual_hose='/'
+    )
+    channel = connection.channel()
+   
+    consumer = Consumer(channel, server_queue)
+    consumer.register_callback(receive_message)
+    consumer.consume(no_ack=True)
+   
+    while True:
+        try:
+            connection.drain_events(timeout=CONSUME_TIMEOUT)
+        except socket.timeout:
+            # flush the server buffer if we haven't gotten
+            # any messages in a while
+            if len(server_buffer) > 0:
+                logging.debug('QUEUE TIMED OUT, FLUSHING BUFFER')
+                process_servers()
+            elif display_waiting:
+                logging.debug('... WAITING ...')
+                display_waiting = False
+        
+    connection.close()

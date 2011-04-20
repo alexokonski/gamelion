@@ -13,6 +13,7 @@ def get_primary_app_ids():
 def get_secondary_app_ids():
     return {
         70    : 'Half-Life',
+        1250  : 'Killing Floor',
         17580 : 'Dystopia',
         31206 : 'Total War: Shogun 2',
         550   : 'Left 4 Dead 2', 

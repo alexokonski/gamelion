@@ -57,7 +57,6 @@ class InfoResponse(object):
 
             #if this is a different kind of response, leave
             if type != 'I':
-                logging.debug('INVALID PACKET, HEADER BYTE: %s', type)
                 raise Exception('INVALID PACKET, HEADER BYTE: %s' % (type,))
 
             # unpack the info response
@@ -82,7 +81,7 @@ class InfoResponse(object):
                 self.name = '__NO_NAME__'
 
     def fill_server(self, server):
-        server.name = unicode(self.name, encoding='latin_1')
+        server.name = unicode(self.name[:255], encoding='latin_1')
         server.map = unicode(self.map, encoding='latin_1')
         server.app_id = self.app_id
         server.number_of_players = self.number_of_players

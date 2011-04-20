@@ -1,12 +1,12 @@
 <%inherit file="/base.mako" />
-<%def name="title()">${c.server.name}</%def>
+<%def name="title()">${unicode(c.server.name, encoding='latin_1')}</%def>
 <%def name="scripts()">
     ${parent.scripts()}
     <link rel="stylesheet" type="text/css" href="/server.css">
     <script type="text/javascript" src="/server.js"></script>
 </%def>
 
-<h1>${c.server.name}</h1>
+<h1>${unicode(c.server.name, encoding='latin_1')}</h1>
 <a href="/">Home</a>
 <div id="refresh"></div>
 <div id="settings_left">

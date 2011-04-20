@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd /home/alex/gamelion
+exec 2>&1
+exec setuidgid alex python gameserver.py
