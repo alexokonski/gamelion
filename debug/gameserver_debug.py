@@ -15,7 +15,7 @@ import gamelion.lib.queryserver as QueryServer
 from sqlalchemy.sql.expression import func
 
 # set up the pylons environment
-conf = appconfig('config:amazon.ini', relative_to='.')
+conf = appconfig('config:../amazon.ini', relative_to='.')
 load_environment(conf.global_conf, conf.local_conf)
 
 # define a query

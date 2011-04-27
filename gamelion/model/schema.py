@@ -27,6 +27,7 @@ class Server(Base):
     password_required = Column(Boolean, nullable=True)
     is_secure = Column(Boolean, nullable=True)
     version = Column(String(64), nullable=True)
+    timeouts = Column(Integer, default=0)
     _game = relation(Game)
 
     @synonym_for('_game')

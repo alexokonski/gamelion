@@ -14,6 +14,7 @@ import struct as pystruct
 import socket
 import time
 import logging
+import sys
 from optparse import OptionParser
 from kombu.connection import BrokerConnection
 from kombu.messaging import Exchange, Queue, Producer
@@ -22,10 +23,11 @@ master_servers = [ ('72.165.61.153', 27015),
                    ('72.165.61.189', 27010),
                    ('68.142.72.250', 27012) ]
 
-MESSAGE_BATCH_SIZE = 100
+
 
 query_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 query_socket.settimeout(1.0)
+DEFAULT_IP = ('0.0.0.0', 0)
 
 def pack_query(region, ip_port, filter):
     """ Pack a Master Server Query """
@@ -76,31 +78,31 @@ def unpack_response(response, producer):
     
     # Get our (ip, port) pairs and put them in a pretty format
 
+    address_strings = []
+    ip = ''
+    port = 0
     while len(response) >= entry_size:
         (ip, port) = struct.unpack(entry_format, response)
         response = response[entry_size:]
 
         ip_string = socket.inet_ntoa(ip)
-        # package up the ip/port
-        #headers = {
-        #    'ip': ip_string,
-        #    'port': port
-        #}
 
-        # delivery_mode=1 means no ack necessary
-        body = "%s:%s" % (ip_string, port)
-        producer.publish(body=body, delivery_mode=1, serializer=None)
+        if (ip_string, port) != DEFAULT_IP:
+            address_strings.append("%s:%s" % (ip_string, str(port)))
 
-        ips.append((ip_string, port))
+    body = '|'.join(address_strings)
+    producer.publish(body=body, delivery_mode=1, serializer=None)
 
+    length = len(address_strings)
+    logging.debug('SENT %d MESSAGES', length)
     assert len(response) == 0
 
-    return ips
+    return ((ip_string, port), length)
 
 def run_full_query(server_address, producer):
     """ Run a full master server query """
 
-    DEFAULT_IP = ('0.0.0.0', 0)
+    
     MAX_ITERATIONS = 10000
     MAX_TIMEOUTS = 5
 
@@ -127,49 +129,27 @@ def run_full_query(server_address, producer):
 
         # Wait to hear back, and add the results to the list
         response = receive_response()
-        response_servers = unpack_response(response, producer)
         
         #if len(response_servers) > 0: and\
            #response_servers[-1] not in servers:
         if len(response) > 0:
 
             timeouts = 0
-            response_servers = unpack_response(response, producer)
-            previous_server = response_servers[-1]
-
-            # We just got a list that (presumably) we haven't
-            # seen yet.  Grab the last one to use as the next 'seed'
-            '''previous_server = response_servers[-1]
-            if previous_server == DEFAULT_IP:
-                break
-
-            # add these servers to the queue
-            for ip, port in response_servers:
-                #logging.debug('SENDING %s, %d', ip, port)
-
-                # package up the ip/port
-                headers = {
-                    'ip': ip,
-                    'port': port
-                }
-
-                # delivery_mode=1 means no ack necessary
-                producer.publish(headers, delivery_mode=1)'''
+            last_server, length = unpack_response(response, producer)
             
-            length = len(response_servers)
-            logging.debug('SENT %d MESSAGES', length)
-            num_servers += length
-            # update our list of servers so we'll be able to know if 
-            # we get another new list
-            #servers.update(response_servers)
+            if last_server == previous_server:
+                logging.debug(
+                    'ERROR? SAME LAST SERVER RECEIVED TWICE: %s',
+                    str(last_server)
+                )
 
-        elif len(response_servers) == 0:
+            previous_server = last_server
+
+            num_servers += length
+
+        elif len(response) == 0:
             timeouts += 1
             logging.debug('EMPTY response received')
-        else:
-            timeouts = 0
-            logging.debug('EXISTING response received: %s',
-                          str(response_servers[-1]))
 
         logging.debug('NUMBER OF SERVERS: %d', num_servers)
         logging.debug('-' * 60)
@@ -207,7 +187,7 @@ def main():
         virtual_host='/'
     )
     channel = connection.channel()
-    
+
     producer = Producer(channel, server_exchange, serializer="pickle")
     # run through all the master servers we know of and ask them for ips
     for server_address in master_servers:
