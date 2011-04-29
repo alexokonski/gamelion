@@ -1,14 +1,16 @@
 import time
+from datetime import datetime
+from datetime import timedelta
 import socket
 import select
 import struct as pystruct
 
 from paste.deploy import appconfig
 from pylons import config
-
-import gamelion.lib.stringz as struct
 from gamelion.config.environment import load_environment
 from gamelion.model import *
+
+import gamelion.lib.stringz as struct
 import logging
 from optparse import OptionParser
 import gamelion.lib.queryserver as QueryServer
@@ -24,7 +26,7 @@ load_environment(conf.global_conf, conf.local_conf)
 query_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_buffer = {}
 display_waiting = True
-last_waiting_time = 0
+last_waiting_time = datetime.now() 
 
 QUERY_CHUNK_SIZE = 25 
 CONSUME_TIMEOUT = 5
@@ -94,6 +96,7 @@ class GameServerQuery(object):
                 'GOT INTEGRITY ERROR, SERVER ALREADY ' + 
                 'INSERTED BY ANOTHER PROCESS' 
             )
+            Session.rollback()
             return False
 
         return True
@@ -172,9 +175,13 @@ def parse_message(body):
     # insert all the addresses in this message into 
     # the local buffer
     for address in address_strings:
-        (ip, port) = address.split(':')
-        port = int(port)
-        server_buffer[(ip, port)] = GameServerQuery(ip, port)
+        if ':' not in address:
+            logging.debug('INVALID ADDRESS PARSED: %s', str(address))
+            continue
+        else:
+            (ip, port) = address.split(':')
+            port = int(port)
+            server_buffer[(ip, port)] = GameServerQuery(ip, port)
 
 def receive_message(body, message):
     global display_waiting
@@ -182,7 +189,7 @@ def receive_message(body, message):
 
     if not display_waiting:
         display_waiting = True
-        last_waiting_time = time.time()
+        last_waiting_time = datetime.now()
 
     parse_message(body)
     process_servers()
@@ -205,7 +212,7 @@ if __name__ == "__main__":
     consumer = Consumer(channel, server_queue)
     consumer.register_callback(receive_message)
     consumer.consume(no_ack=True)
-   
+  
     while True:
         try:
             connection.drain_events(timeout=CONSUME_TIMEOUT)
@@ -216,12 +223,12 @@ if __name__ == "__main__":
                 logging.debug('QUEUE TIMED OUT, FLUSHING BUFFER')
                 process_servers()
             elif display_waiting:
-                processing_time = time.time() -\
+                processing_time = datetime.now() -\
                                   last_waiting_time -\
-                                  CONSUME_TIMEOUT
+                                  timedelta(seconds=CONSUME_TIMEOUT)
 
                 logging.debug(
-                    '... WAITING ... TIME SINCE LAST: %f s',
+                    '... WAITING ... TIME SINCE LAST: %s',
                     processing_time
                 )
                 display_waiting = False

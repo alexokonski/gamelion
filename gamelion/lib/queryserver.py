@@ -2,7 +2,9 @@ import socket
 import struct as pystruct
 import gamelion.lib.stringz as struct
 import logging
-from datetime import time
+from datetime import datetime
+from gamelion.model import *
+
 
 class ServerPlayer(object):
     def __init__(self, name, kills, time_connected):
@@ -77,12 +79,21 @@ class InfoResponse(object):
             self.version,\
                     = struct.unpack('<cczzzzhBBBccBBz', info_response)
 
+            self.name = self.name.strip()
             if len(self.name) == 0:
                 self.name = '__NO_NAME__'
 
     def fill_server(self, server):
-        server.name = unicode(self.name[:255], encoding='latin_1')
-        server.map = unicode(self.map, encoding='latin_1')
+        MAX_NAME_LENGTH = Server.name.property.columns[0].type.length
+        MAX_MAP_LENGTH = Server.map.property.columns[0].type.length
+        MAX_VERSION_LENGTH = Server.version.property.columns[0].type.length
+
+        server.name = unicode(
+            self.name[:MAX_NAME_LENGTH], 
+            encoding='latin_1'
+        )
+
+        server.map = unicode(self.map[:MAX_MAP_LENGTH], encoding='latin_1')
         server.app_id = self.app_id
         server.number_of_players = self.number_of_players
         server.max_players = self.max_players
@@ -100,7 +111,16 @@ class InfoResponse(object):
         else:
             server.is_secure = True
 
-        server.version = unicode(self.version, encoding='latin_1')
+        server.version = unicode(
+            self.version[:MAX_VERSION_LENGTH], 
+            encoding='latin_1'
+        )
+        
+        # reset consecutive timeouts counter
+        server.timeouts = 0
+
+        # stamp with timestamp
+        server.timestamp = datetime.now()
 
 class PlayerResponse(object):
     def __init__(self, player_response):

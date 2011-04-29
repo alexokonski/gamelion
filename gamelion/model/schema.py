@@ -28,6 +28,7 @@ class Server(Base):
     is_secure = Column(Boolean, nullable=True)
     version = Column(String(64), nullable=True)
     timeouts = Column(Integer, default=0)
+    timestamp = Column(DateTime, nullable=False)
     _game = relation(Game)
 
     @synonym_for('_game')
