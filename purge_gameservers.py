@@ -13,7 +13,7 @@ load_environment(conf.global_conf, conf.local_conf)
 
 # delete a server if it hasn't been successfully
 # pinged in this long
-TIMEOUT_CUTOFF = datetime.timedelta(days=5)
+TIMEOUT_CUTOFF = datetime.timedelta(days=4)
 
 def main():
     logging.basicConfig(level=logging.DEBUG)

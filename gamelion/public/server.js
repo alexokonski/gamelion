@@ -20,10 +20,10 @@ $(function() {
         $("#version").text(data.version);
         $("#os").text(data.os);
 
-        obj = $("#players_table").find("tbody").empty();
+        var obj = $("#players_table").find("tbody").empty();
 
-        players = data.players
-        for(i=0; i<players.length; i++)
+        var players = data.players
+        for(var i=0; i<players.length; i++)
         {
             obj = obj.append($("<tr>")
                         .append($("<td>")
