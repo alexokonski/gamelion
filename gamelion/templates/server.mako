@@ -28,7 +28,7 @@ Number of bots: <span id="bots">${c.server.number_of_bots}</span>
 </br>
 Secure: <span id="secure">${c.server.is_secure_str}</span>
 </br>
-Version: <span id="version">${c.server.version}</span>
+Version: <span id="version">${unicode(c.server.version, encoding='latin_1')}</span>
 </br>
 OS: <span id="os">${c.server.operating_system_str}</span>
 </p>

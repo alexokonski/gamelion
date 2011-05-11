@@ -5,6 +5,34 @@ import logging
 from datetime import datetime
 from gamelion.model import *
 
+# http://darklaunch.com/2009/10/06/python-time-duration-human-friendly-timestamp
+def get_time_string(seconds, significant_only=False):
+    seconds = long(round(seconds))
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    days, hours = divmod(hours, 24)
+    years, days = divmod(days, 365.242199)
+ 
+    minutes = long(minutes)
+    hours = long(hours)
+    days = long(days)
+    years = long(years)
+ 
+    duration = []
+    if years > 0 and (not significant_only or len(duration) == 0):
+        duration.append('%d year' % years + 's'*(years != 1))
+    else:
+        if days > 0 and (not significant_only or len(duration) == 0):
+            duration.append('%d day' % days + 's'*(days != 1))
+        if hours > 0 and (not significant_only or len(duration) == 0):
+            duration.append('%d hour' % hours + 's'*(hours != 1))
+        if minutes > 0 and (not significant_only or len(duration) == 0):
+            duration.append('%d minute' % minutes + 's'*(minutes != 1))
+        if seconds > 0 and (not significant_only or len(duration) == 0):
+            duration.append('%d second' % seconds + 's'*(seconds != 1))
+
+    return ' '.join(duration)
+
 
 class ServerPlayer(object):
     def __init__(self, name, kills, time_connected):
@@ -13,34 +41,6 @@ class ServerPlayer(object):
         self.time_connected = time_connected
     
     def as_json_dict(self):
-
-        # http://darklaunch.com/2009/10/06/python-time-duration-human-friendly-timestamp
-        def get_time_string(seconds):
-            seconds = long(round(seconds))
-            minutes, seconds = divmod(seconds, 60)
-            hours, minutes = divmod(minutes, 60)
-            days, hours = divmod(hours, 24)
-            years, days = divmod(days, 365.242199)
-         
-            minutes = long(minutes)
-            hours = long(hours)
-            days = long(days)
-            years = long(years)
-         
-            duration = []
-            if years > 0:
-                duration.append('%d year' % years + 's'*(years != 1))
-            else:
-                if days > 0:
-                    duration.append('%d day' % days + 's'*(days != 1))
-                if hours > 0:
-                    duration.append('%d hour' % hours + 's'*(hours != 1))
-                if minutes > 0:
-                    duration.append('%d minute' % minutes + 's'*(minutes != 1))
-                if seconds > 0:
-                    duration.append('%d second' % seconds + 's'*(seconds != 1))
-
-            return ' '.join(duration)
 
         return { 
             'name'           : self.name,

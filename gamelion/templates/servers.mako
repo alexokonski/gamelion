@@ -1,3 +1,5 @@
+<%! import datetime %>
+<%! from gamelion.lib.queryserver import get_time_string %>
 <%inherit file="/base.mako" />
 <%def name="title()">Servers</%def>
 
@@ -47,9 +49,12 @@ ${pager()}
 <tr>
     <th>Name</th>
     <th>Game</th>
+    <th>Players</th>
+    <th>Last Update</th>
     <th>IP Address</th>
 </tr>
 <% isAlt = False %>
+<% now = datetime.datetime.now() %>
 % for server in c.paginator:
     % if isAlt:
     <tr class="alt1">
@@ -58,6 +63,10 @@ ${pager()}
     % endif
         <td class="name"><a href="${url(controller='server', address=server.address + ':' + str(server.port))}">${unicode(server.name, encoding='latin_1')}</a></td>
         <td>${server.app_name}</td>
+        <td>${server.number_of_players}/${server.max_players}</td>
+        <% delta = now - server.timestamp %>
+        <% seconds = delta.days * 25 * 3600 + delta.seconds %>
+        <td>${get_time_string(seconds=seconds, significant_only=True)}</td>
         <td>${server.address}:${server.port}</td>
     </tr>
     <% isAlt = not isAlt %>

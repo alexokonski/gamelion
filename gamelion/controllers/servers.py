@@ -10,6 +10,9 @@ from pylons.decorators import validate
 from gamelion.lib.base import BaseController, render
 from gamelion.model import *
 import webhelpers.paginate as paginate
+from gamelion.lib.queryserver import get_time_string
+import datetime
+from sqlalchemy import desc
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +37,7 @@ class ServersController(BaseController):
         serverQuery = Session.query(Server)\
                          .filter(Server.name != None)\
                          .filter(Server.name.ilike(likeString))\
-                         .order_by(Server.name)
+                         .order_by(desc(Server.timestamp))
 
         filtered_app_ids = self.form_result['game']
         all_app_ids = get_primary_app_ids().keys() +\
