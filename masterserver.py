@@ -83,11 +83,13 @@ def unpack_response(response, producer):
     port = 0
     while len(response) >= entry_size:
         (ip, port) = struct.unpack(entry_format, response)
+        crap = response[:entry_size]
         response = response[entry_size:]
 
         ip_string = socket.inet_ntoa(ip)
-
-        if (ip_string, port) != DEFAULT_IP:
+        
+        # sometimes entries have a port of 0... get rid of them 
+        if (ip_string, port) != DEFAULT_IP and port != 0:
             address_strings.append("%s:%s" % (ip_string, str(port)))
 
     body = '|'.join(address_strings)

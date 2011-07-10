@@ -45,7 +45,7 @@ class GameServerQuery(object):
         try:
             sock.sendto(data, (self.address, self.port))
         except socket.error as e:
-            logging.debug(str(e))
+            logging.debug('%s addr:%s port:%s', str(e), self.address, str(self.port))
 
         self.times_sent += 1
 
