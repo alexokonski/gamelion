@@ -48,6 +48,14 @@ class ServerPlayer(object):
             'time_connected' : get_time_string(self.time_connected)
         }
 
+    def __repr__(self):
+        return 'ServerPlayer(%s, %d, %f)' % \
+                (self.name, self.kills, self.time_connected)
+
+    def __cmp__(self, other):
+        return cmp(self.kills, other.kills) 
+
+
 class InfoResponse(object):
     def __init__(self, info_response):
         if info_response != None:
@@ -138,16 +146,19 @@ class PlayerResponse(object):
                 index,\
                 name,\
                 kills,\
-                time = struct.unpack('<BzIf', player_response)
-                
-                self.players.append(ServerPlayer(name, kills, time))
+                time = struct.unpack('<Bzif', player_response)
+           
+                # don't include 'players' with no name - the steam
+                # browser itself appears to ignore these
+                if len(name) > 0:
+                    self.players.append(ServerPlayer(name, kills, time))
 
-                # add 1 for null byte 
-                packet_size = pystruct.calcsize('<BIf') + len(name) + 1
+                # add 1 for null byte in the player name 
+                packet_size = pystruct.calcsize('<Bif') + len(name) + 1
                 player_response = player_response[packet_size:]
 
-            assert len(self.players) == num_players
-    
+            self.players.sort(reverse=True)
+
 class QueryResult(object):
     def __init__(self, info_response=None, player_response=None):
         self._info_response = InfoResponse(info_response)
