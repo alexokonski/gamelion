@@ -98,7 +98,7 @@ class InfoResponse(object):
 
         server.name = unicode(
             self.name[:MAX_NAME_LENGTH], 
-            encoding='latin_1'
+            encoding='utf-8'
         )
 
         server.map = unicode(self.map[:MAX_MAP_LENGTH], encoding='latin_1')

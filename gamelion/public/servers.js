@@ -1,24 +1,19 @@
 "use strict";
 
 $(function() {
-    if($(".secondary_checkboxes").find("input:checked").val() == undefined)
-    {
-        $(".secondary_checkboxes").hide();
+    var checkDiv = ".secondary_game_checkboxes"
+    if($(checkDiv).find("input:checked").val() == undefined) {
+        $(".secondary_game_checkboxes").hide();
         $("#form_toggle").text("More Games")
-    }
-    else
-    {
+    } else {
         $("#form_toggle").text("Less Games")
     }
     
     $("#form_toggle").click(function() {
-        $(".secondary_checkboxes").slideToggle("fast", function() {
-            if($(".secondary_checkboxes").is(":visible"))
-            {
+        $(checkDiv).slideToggle("fast", function() {
+            if($(checkDiv).is(":visible")) {
                 $("#form_toggle").text("Less Games");
-            }
-            else
-            {
+            } else {
                 $("#form_toggle").text("More Games");
             }
         });

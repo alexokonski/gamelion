@@ -53,7 +53,7 @@ class GameServerQuery(object):
                           info_response.description)
             game = Game()
             game.id = info_response.app_id
-            game.name = unicode(info_response.description, encoding='latin_1')
+            game.name = unicode(info_response.description, encoding='utf-8')
             Session.add(game)
             Session.commit()
 

@@ -40,8 +40,9 @@ class ServersController(BaseController):
                          .order_by(desc(Server.timestamp))
 
         filtered_app_ids = self.form_result['game']
-        all_app_ids = get_primary_app_ids().keys() +\
-                      get_secondary_app_ids().keys()
+
+        searchable_apps = form.get_searchable_apps()
+        all_app_ids = [app.app_id for app in searchable_apps]
 
         # restrict the query to certain games (if applicable)
         if len(filtered_app_ids) > 0:
@@ -52,11 +53,9 @@ class ServersController(BaseController):
             serverQuery = serverQuery\
                             .filter(Server.app_id.in_(all_app_ids))
 
-        # default revealed checkboxes will be generated from this list
-        c.primary_app_ids = get_primary_app_ids()
-
-        # default hidden chexboxes will be generated from this list
-        c.secondary_app_ids = get_secondary_app_ids()
+        # app (game) checkboxes will be generated from this list
+        c.app_ids = searchable_apps 
+        c.NUM_PRIMARY_CHECK_BOXES = form.NUM_PRIMARY_CHECK_BOXES
 
         # make sure the paginator links have the currently filtered
         # games in them
@@ -67,7 +66,7 @@ class ServersController(BaseController):
             if param_name in request.params:
                 kwargs[param_name] = id
             i += 1
- 
+
         c.paginator = paginate.Page(
             serverQuery,
             item_count=serverQuery.count(),
@@ -76,9 +75,6 @@ class ServersController(BaseController):
             search=request.params.get('search', ''),
             **kwargs
         )
-
-        #for server in c.paginator:
-        #    print repr(server.name)
 
         renderedMako = render('/servers.mako')
         return htmlfill.render(renderedMako, defaults=request.params)

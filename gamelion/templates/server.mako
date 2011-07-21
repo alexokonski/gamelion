@@ -1,12 +1,12 @@
 <%inherit file="/base.mako" />
-<%def name="title()">${unicode(c.server.name, encoding='latin_1')}</%def>
+<%def name="title()">${c.server.name}</%def>
 <%def name="scripts()">
     ${parent.scripts()}
     <link rel="stylesheet" type="text/css" href="/server.css">
     <script type="text/javascript" src="/server.js"></script>
 </%def>
 
-<h1>${unicode(c.server.name, encoding='latin_1')}</h1>
+<h1>${c.server.name}</h1>
 <a href="/">Home</a>
 <div id="refresh"></div>
 <div id="settings_left">
@@ -28,7 +28,7 @@ Number of bots: <span id="bots">${c.server.number_of_bots}</span>
 </br>
 Secure: <span id="secure">${c.server.is_secure_str}</span>
 </br>
-Version: <span id="version">${unicode(c.server.version, encoding='latin_1')}</span>
+Version: <span id="version">${c.server.version}</span>
 </br>
 OS: <span id="os">${c.server.operating_system_str}</span>
 </p>

@@ -2,6 +2,10 @@
 {
     font-family:"Trebuchet MS", Arial, Helvetica, sans-serif;
 }
+fieldset
+{
+    border: 2px solid #06705D;
+}
 .text_input
 {
     border: 2px solid #06705D;
@@ -19,6 +23,21 @@
 .checkbox_group
 {
     margin-right:20px;
+}
+.game_checkboxes
+{
+    width: 25%;
+    float: left;
+}
+.options_checkboxes
+{
+    width: 25%;
+    float: left;
+}
+.pager
+{
+    clear: left;
+    padding-top:10px;
 }
 table
 {
