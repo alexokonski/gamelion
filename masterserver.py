@@ -83,7 +83,6 @@ def unpack_response(response, producer):
     port = 0
     while len(response) >= entry_size:
         (ip, port) = struct.unpack(entry_format, response)
-        crap = response[:entry_size]
         response = response[entry_size:]
 
         ip_string = socket.inet_ntoa(ip)

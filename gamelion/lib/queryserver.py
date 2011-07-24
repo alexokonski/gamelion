@@ -98,10 +98,16 @@ class InfoResponse(object):
 
         server.name = unicode(
             self.name[:MAX_NAME_LENGTH], 
-            encoding='utf-8'
+            encoding='utf-8',
+            errors='ignore'
+        )
+        
+        server.map = unicode(
+            self.map[:MAX_MAP_LENGTH], 
+            encoding='utf-8', 
+            errors='ignore'
         )
 
-        server.map = unicode(self.map[:MAX_MAP_LENGTH], encoding='latin_1')
         server.app_id = self.app_id
         server.number_of_players = self.number_of_players
         server.max_players = self.max_players
@@ -121,7 +127,8 @@ class InfoResponse(object):
 
         server.version = unicode(
             self.version[:MAX_VERSION_LENGTH], 
-            encoding='latin_1'
+            encoding='utf-8',
+            errors='ignore'
         )
         
         # reset consecutive timeouts counter
