@@ -1,21 +1,28 @@
 "use strict";
 
 $(function() {
-    var checkDiv = ".secondary_game_checkboxes"
-    if($(checkDiv).find("input:checked").val() == undefined) {
-        $(".secondary_game_checkboxes").hide();
-        $("#form_toggle").text("More Games")
-    } else {
-        $("#form_toggle").text("Less Games")
-    }
+    var checkDiv = ".secondary_checkboxes";
+
+    $(checkDiv).hide();
+    $(checkDiv).each(function() {
+        if($(this).find("input:checked").val() != undefined ) {
+            $(this).show();
+            $(this).next(".form_toggle").text("Less");
+        } else {
+            $(this).hide();
+            $(this).next(".form_toggle").text("More");
+        }
+    });
     
-    $("#form_toggle").click(function() {
-        $(checkDiv).slideToggle("fast", function() {
-            if($(checkDiv).is(":visible")) {
-                $("#form_toggle").text("Less Games");
-            } else {
-                $("#form_toggle").text("More Games");
-            }
-        });
+    $(".form_toggle").click(function() {
+        var checkboxes = $(this).parent("fieldset")
+                                .children(".secondary_checkboxes");
+        checkboxes.slideToggle("fast");
+
+        if(checkboxes.is(":visible")) {
+            $(this).text("More");
+        } else {
+            $(this).text("Less");
+        }
     });
 });

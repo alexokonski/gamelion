@@ -39,33 +39,18 @@ class ServersController(BaseController):
                          .filter(Server.name.ilike(likeString))\
                          .order_by(desc(Server.timestamp))
 
-        filtered_app_ids = self.form_result['game']
-
-        searchable_apps = form.get_searchable_apps()
-        all_app_ids = [app.app_id for app in searchable_apps]
-
-        # restrict the query to certain games (if applicable)
-        if len(filtered_app_ids) > 0:
-            serverQuery = serverQuery.filter(
-                Server.app_id.in_(filtered_app_ids)
-            )
-        else:
-            serverQuery = serverQuery\
-                            .filter(Server.app_id.in_(all_app_ids))
-
-        # app (game) checkboxes will be generated from this list
-        c.app_ids = searchable_apps 
-        c.NUM_PRIMARY_CHECK_BOXES = form.NUM_PRIMARY_CHECK_BOXES
-
-        # make sure the paginator links have the currently filtered
-        # games in them
+        checkbox_groups = form.get_checkbox_groups()
         kwargs = {}
-        i = 0
-        for id in all_app_ids:
-            param_name = 'game-%d' % i
-            if param_name in request.params:
-                kwargs[param_name] = id
-            i += 1
+        for group in checkbox_groups:
+            serverQuery = group.apply_filter(serverQuery, self.form_result)
+        
+            # make sure the paginator links have the currently filtered
+            # checkboxes in them
+            for checkbox in group.checkboxes:
+                if checkbox.name in request.params:
+                    kwargs[checkbox.name] = checkbox.value
+
+        c.checkbox_groups = checkbox_groups
 
         c.paginator = paginate.Page(
             serverQuery,

@@ -8,20 +8,33 @@
     <script type="text/javascript" src="/servers.js"></script>
 </%def>
 
-<%def name="game_checkbox(app_id, num, game_name)">
+<%def name="checkbox(box)">
     <span class="checkbox_group">
-        <input type="checkbox" name="game-${num}" value=${app_id} />
-        <label class="small_text">${game_name}</label>
+        <input type="checkbox" name="${box.name}" value=${box.value} />
+        <label class="small_text">${box.label}</label>
     </span>
     <br/>
 </%def>
 
-<%def name="options_checkbox(option_id, option_name)">
-    <span class="checkbox_group">
-        <input type="checkbox" name="server_option" value=${option_id} />
-        <label class="small_text">${option_name}</label>
+<%def name="checkbox_group(group)">
+    <div class="checkboxes">
+    <fieldset>
+    <legend>${group.label}</legend>
+    <span class="primary_checkboxes">
+    % for i in xrange(group.number_initially_visible):
+        ${checkbox(group.checkboxes[i])}
+    % endfor
     </span>
-    <br/>
+
+    <span class="secondary_checkboxes">
+    % for i in xrange(group.number_initially_visible, len(group.checkboxes)):
+        ${checkbox(group.checkboxes[i])}
+    % endfor
+    </span>
+
+    <a class="form_toggle" href="#"></a>
+    </fieldset>
+    </div>
 </%def>
 
 <h1><a href="/">Gamelion</a></h1>
@@ -36,30 +49,9 @@
     <input class="text_input" type="text" name="search" />
     <input class="button" type="submit" value="Go"/>
     <br/>
-    <div class="game_checkboxes">
-    <fieldset>
-        <legend>Games</legend>
-        <span class="primary_game_checkboxes">
-        <% i = 0 %>
-        % for app in c.app_ids[:c.NUM_PRIMARY_CHECK_BOXES]:
-            ${game_checkbox(app.app_id, i, app.app_name)}  
-            <% i += 1 %>
-        % endfor
-        </span>
-        <div class="secondary_game_checkboxes">
-        % for app in c.app_ids[c.NUM_PRIMARY_CHECK_BOXES:]:
-            ${game_checkbox(app.app_id, i, app.app_name)}  
-            <% i += 1 %>
-        % endfor   
-        </div>
-        <a id="form_toggle" href="#"></a>
-    </fieldset>
-    </div>
-    <div class="options_checkboxes">
-    <fieldset>
-        <legend>Server Options</legend>
-    </fieldset>
-    </div>
+    % for group in c.checkbox_groups:
+        ${checkbox_group(group)}
+    % endfor
 </form>
 </p>
 
