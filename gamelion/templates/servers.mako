@@ -10,8 +10,10 @@
 
 <%def name="checkbox(box)">
     <span class="checkbox_group">
+        <label class="small_text">
         <input type="checkbox" name="${box.name}" value=${box.value} />
-        <label class="small_text">${box.label}</label>
+        ${box.label}
+        </label>
     </span>
     <br/>
 </%def>

@@ -25,7 +25,8 @@ $(function() {
         var players = data.players
         for(var i=0; i<players.length; i++)
         {
-            obj = obj.append($("<tr>")
+            var newClass = (i%2 == 1) ? "alt1" : "alt2";
+            obj = obj.append($("<tr>").addClass(newClass)
                         .append($("<td>")
                             .text(players[i].name)
                         ).append($("<td>")
