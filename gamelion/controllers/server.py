@@ -38,7 +38,11 @@ class ServerController(BaseController):
             server_response = query_game_server(ip, port)
 
             if server_response != None:
-                server_response.fill_server(c.server)
+                server_response.fill_server(
+                    server=c.server, 
+                    update_hotness=False
+                )
+
                 Session.commit()
                 json_response = server_response.as_json_dict()
                 return json.dumps(

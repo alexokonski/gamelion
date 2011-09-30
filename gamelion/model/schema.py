@@ -2,6 +2,7 @@ from sqlalchemy.schema import *
 from sqlalchemy.types import *
 from sqlalchemy.orm import relation
 from sqlalchemy.ext.declarative import synonym_for
+from sqlalchemy.sql.expression import text
 
 from gamelion.model.meta import Base
 
@@ -29,6 +30,18 @@ class Server(Base):
     version = Column(String(64, convert_unicode=True), nullable=True)
     timeouts = Column(Integer, default=0)
     timestamp = Column(DateTime, nullable=False)
+    hotness_this_month = Column(Float, server_default='0')
+    number_of_hotness_this_month = Column(
+        Integer, 
+        nullable=False, 
+        server_default='0'
+    )
+    hotness_all_time = Column(Float, server_default='0')
+    number_of_hotness_all_time = Column(
+        Integer, 
+        nullable=False, 
+        server_default='0'
+    )
     _game = relation(Game)
 
     @synonym_for('_game')

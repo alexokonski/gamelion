@@ -91,7 +91,12 @@ class InfoResponse(object):
             if len(self.name) == 0:
                 self.name = '__NO_NAME__'
 
-    def fill_server(self, server):
+    # number_of_points includes the new value
+    def _cumulative_avg(self, new_value, current_avg, number_of_points):
+        old_number = number_of_points - 1
+        return (new_value + (old_number * current_avg)) / number_of_points
+
+    def fill_server(self, server, update_hotness=True):
         MAX_NAME_LENGTH = Server.name.property.columns[0].type.length
         MAX_MAP_LENGTH = Server.map.property.columns[0].type.length
         MAX_VERSION_LENGTH = Server.version.property.columns[0].type.length
@@ -134,8 +139,45 @@ class InfoResponse(object):
         # reset consecutive timeouts counter
         server.timeouts = 0
 
+        # get the time
+        now = datetime.now()
+
         # stamp with timestamp
-        server.timestamp = datetime.now()
+        server.timestamp = now
+
+        # update hotness
+        if update_hotness:
+            if server.timestamp.month != now.month:
+                server.hotness_this_month = 0
+                server.number_of_hotness_this_month = 0
+
+            current_hotness = float(0)
+
+            if self.max_players > 0:
+                number_of_players =  min(
+                    self.number_of_players - self.number_of_bots, 
+                    self.max_players
+                )
+                current_hotness = float(number_of_players)
+
+                # a full server probably means people are trying
+                # to join.  Give a 25% bonus for this
+                if number_of_players == self.max_players:
+                    current_hotness += float(self.max_players) * 0.25
+
+            server.number_of_hotness_this_month += 1
+            server.hotness_this_month = self._cumulative_avg(
+                current_hotness,
+                server.hotness_this_month,
+                server.number_of_hotness_this_month
+            )
+
+            server.number_of_hotness_all_time += 1
+            server.hotness_all_time = self._cumulative_avg(
+                current_hotness,
+                server.hotness_all_time,
+                server.number_of_hotness_all_time
+            )
 
 class PlayerResponse(object):
     def __init__(self, player_response):
@@ -198,8 +240,8 @@ class QueryResult(object):
                 [p.as_json_dict() for p in self._player_response.players]
         }
 
-    def fill_server(self, server):
-        self._info_response.fill_server(server)
+    def fill_server(self, server, update_hotness):
+        self._info_response.fill_server(server, update_hotness)
 
 def try_query(ip, port, data):
     MAX_RETRIES = 3
@@ -239,10 +281,13 @@ def query_game_server(ip, port):
         pre_header,\
         header,\
         challenge = struct.unpack('<IBi', challenge_response)
-        assert header == 0x41
-
-        player_query = pack_player_query(challenge)
-        player_response = try_query(ip, port, player_query)
+        if header == 0x41:
+            player_query = pack_player_query(challenge)
+            player_response = try_query(ip, port, player_query)
+        elif header == 0x44: #some servers seem to skip the whole challenge
+            player_response = challenge_response
+        else:
+            return None
 
     if player_response == None and info_response == None:
         return None

@@ -2,6 +2,7 @@ import time
 import socket
 import select
 import struct as pystruct
+from datetime import datetime
 
 from paste.deploy import appconfig
 from pylons import config
@@ -93,9 +94,20 @@ def query_servers(query_found_only, query_in_random_order, address):
     logging.debug('QUERY COMPLETE')
 
     logging.debug('GENERATING DICT')
+
     queries = {}
-    for server in servers:
+    if address != None and len(servers) == 0:
+        server = Server()
+        server.address = ip
+        server.port = port
+        server.timestamp = datetime.now()
+        Session.add(server)
+        Session.commit()
         queries[(server.address, server.port)] = GameServerQuery(server)
+    else:
+        for server in servers:
+            queries[(server.address, server.port)] = GameServerQuery(server)
+    
     logging.debug('DICT GENERATED')
 
     #queries = map(lambda s: GameServerQuery(s), servers) 

@@ -33,16 +33,20 @@ class ServersController(BaseController):
         # build search query
         if 'search' in request.params:
             likeString = '%' + request.params['search'] + '%'
-
-        serverQuery = Session.query(Server)\
+        
+        server_query = Session.query(Server)\
                          .filter(Server.name != None)\
                          .filter(Server.name.ilike(likeString))\
-                         .order_by(desc(Server.timestamp))
+                         .order_by(desc(Server.hotness_all_time))
+
+        if 'search' not in request.params or request.params['search'] == '':
+            cutoff = datetime.datetime.now() - datetime.timedelta(hours=2)
+            server_query = server_query.filter(Server.timestamp > cutoff)
 
         checkbox_groups = form.get_checkbox_groups()
         kwargs = {}
         for group in checkbox_groups:
-            serverQuery = group.apply_filter(serverQuery, self.form_result)
+            server_query = group.apply_filter(server_query, self.form_result)
         
             # make sure the paginator links have the currently filtered
             # checkboxes in them
@@ -53,8 +57,8 @@ class ServersController(BaseController):
         c.checkbox_groups = checkbox_groups
 
         c.paginator = paginate.Page(
-            serverQuery,
-            item_count=serverQuery.count(),
+            server_query,
+            item_count=server_query.count(),
             page=int(request.params.get('page', 1)),
             items_per_page=50,
             search=request.params.get('search', ''),

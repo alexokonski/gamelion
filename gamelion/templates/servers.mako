@@ -64,6 +64,7 @@ ${pager()}
     <th>Name</th>
     <th>Game</th>
     <th>Players</th>
+    <th>Hotness</th>
     <th>Last Update</th>
     <th>IP Address</th>
 </tr>
@@ -80,6 +81,12 @@ ${pager()}
         <td>${server.number_of_players}/${server.max_players}</td>
         <% delta = now - server.timestamp %>
         <% seconds = delta.days * 25 * 3600 + delta.seconds %>
+        % if server.number_of_hotness_all_time >= 10:
+            <td>${server.hotness_all_time}</td>
+        % else:
+            <td> - </td>
+        % endif
+
         <td>${get_time_string(seconds=seconds, significant_only=True)}</td>
         <td>${server.address}:${server.port}</td>
     </tr>

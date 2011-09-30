@@ -83,13 +83,35 @@ class GameServerQuery(object):
                     after_time - before_time
                 )
 
-            server = Server()
-            server.address = self.address
-            server.port = self.port
+            results = Session.query(Server)\
+                             .filter(Server.address == self.address)\
+                             .filter(Server.port == self.port)\
+                             .all()
+
+            if len(results) != 1:
+                #logging.debug(
+                #    'ADDING NEW SERVER: %s, %d',
+                #    self.address,
+                #    self.port
+                #)
+
+                server = Server()
+                server.address = self.address
+                server.port = self.port
+                server.hotness_this_month = float(0)
+                server.hotness_all_time = float(0)
+                server.number_of_hotness_this_month = 0
+                server.number_of_hotness_all_time = 0
+            else:
+                server = results[0]
+
+
+            #server = Server()
+            #server.address = self.address
+            #server.port = self.port
 
             # fill in the rest of the response data
             info_response.fill_server(server)
-            server = Session.merge(server)
             Session.add(server)
 
         except sqlalchemy.exc.IntegrityError:
