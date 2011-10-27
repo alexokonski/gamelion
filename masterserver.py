@@ -19,8 +19,8 @@ from optparse import OptionParser
 from kombu.connection import BrokerConnection
 from kombu.messaging import Exchange, Queue, Producer
 
-master_servers = [ ('72.165.61.153', 27015),
-                   ('72.165.61.189', 27010),
+master_servers = [ ('72.165.61.190', 27011),
+                   ('63.234.149.90', 27011),
                    ('68.142.72.250', 27012) ]
 
 
@@ -55,7 +55,7 @@ def receive_response():
 
     return response
 
-def unpack_response(response, producer):
+def unpack_response(previous_server, response, producer):
     """ 
     Unpack a response from a master server, and 
     return the results in a list 
@@ -91,12 +91,16 @@ def unpack_response(response, producer):
         if (ip_string, port) != DEFAULT_IP and port != 0:
             address_strings.append("%s:%s" % (ip_string, str(port)))
 
-    body = '|'.join(address_strings)
-    producer.publish(body=body, delivery_mode=1, serializer=None)
+    length = 0
+    if previous_server != (ip_string, port):
+        body = '|'.join(address_strings)
+        producer.publish(body=body, delivery_mode=1, serializer=None)
 
-    length = len(address_strings)
-    logging.debug('SENT %d MESSAGES', length)
-    assert len(response) == 0
+        length = len(address_strings)
+        #logging.debug('SENT %d SERVERS', length)
+        assert len(response) == 0
+    else:
+        logging.debug('ERROR, SENT 0 SERVERS')
 
     return ((ip_string, port), length)
 
@@ -118,8 +122,8 @@ def run_full_query(server_address, producer):
           (i == 0 or previous_server != DEFAULT_IP) and\
           timeouts < MAX_TIMEOUTS:
 
-        logging.debug('')
-        logging.debug('-' * 60)
+        #logging.debug('')
+        #logging.debug('-' * 60)
 
         # get a string for the last ip the server sent us
         server_string = '%s:%d' % (previous_server)
@@ -136,7 +140,12 @@ def run_full_query(server_address, producer):
         if len(response) > 0:
 
             timeouts = 0
-            last_server, length = unpack_response(response, producer)
+            
+            last_server, length = unpack_response(
+                previous_server, 
+                response, 
+                producer
+            )
             
             if last_server == previous_server:
                 logging.debug(
@@ -152,13 +161,15 @@ def run_full_query(server_address, producer):
             timeouts += 1
             logging.debug('EMPTY response received')
 
-        logging.debug('NUMBER OF SERVERS: %d', num_servers)
-        logging.debug('-' * 60)
+        #logging.debug('NUMBER OF SERVERS: %d', num_servers)
+        #logging.debug('-' * 60)
 
         i += 1
 
         # this loop has a tendency to spin fast
         time.sleep(1)
+
+    logging.debug('%d TOTAL SERVERS RECEIVED FROM SERVER', num_servers)
 
 def main():
     """ Query the master server and add the results to the database """
