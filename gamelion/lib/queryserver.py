@@ -65,31 +65,111 @@ class InfoResponse(object):
 
             type, = struct.unpack('<c', info_response)
 
-            #if this is a different kind of response, leave
-            if type != 'I':
+            # if this is a different kind of response, leave
+            if type == 'I':
+                self._parse_source_packet(info_response)
+            elif type == 'm':
+                self._parse_goldsource_packet(info_response)
+            else:
                 raise Exception('INVALID PACKET, HEADER BYTE: %s' % (type,))
 
-            # unpack the info response
-            _,\
-            _,\
-            self.name,\
-            self.map,\
-            _,\
-            self.description,\
-            self.app_id,\
-            self.number_of_players,\
-            self.max_players,\
-            self.number_of_bots,\
-            self.is_dedicated,\
-            self.operating_system,\
-            self.password_required,\
-            self.is_secure,\
-            self.version,\
-                    = struct.unpack('<cczzzzhBBBccBBz', info_response)
-
-            self.name = self.name.strip()
+            
             if len(self.name) == 0:
                 self.name = '__NO_NAME__'
+
+    def _parse_source_packet(self, info_response):
+        # unpack the info response
+        _,\
+        _,\
+        self.name,\
+        self.map,\
+        self.game_dir,\
+        self.description,\
+        self.app_id,\
+        self.number_of_players,\
+        self.max_players,\
+        self.number_of_bots,\
+        self.is_dedicated,\
+        self.operating_system,\
+        self.password_required,\
+        self.is_secure,\
+        self.version,\
+                = struct.unpack('<cczzzzhBBBccBBz', info_response)
+
+        info_response = info_response[self._get_length():]
+
+        if len(info_response) > 0:
+            extra_data_flag, = struct.unpack('<B', info_response)
+            info_response = info_response[pystruct.calcsize('<B'):]
+            
+            #print repr(info_response)
+            #print 'EDF: %x' % (extra_data_flag)
+            #print '@' * 79
+            if extra_data_flag & 0x80:
+                port, = struct.unpack('<H', info_response)
+                info_response = info_response[pystruct.calcsize('<H'):]
+                #print 'GAME PORT', port, repr(info_response)
+            if extra_data_flag & 0x10:
+                steam_id, = struct.unpack('<Q', info_response)
+                info_response = info_response[pystruct.calcsize('<Q'):]
+                #print 'STEAM ID', steam_id, repr(info_response)
+            if extra_data_flag & 0x40:
+                port, name = struct.unpack('<Hz', info_response)
+                info_response = info_response[
+                    (pystruct.calcsize('<H') + len(name) + 1):]
+                #print 'SPECTATOR INFO', port, name, repr(info_response)
+            if extra_data_flag & 0x20:
+                tags, = struct.unpack('<z', info_response)
+                info_response = info_response[(len(tags) + 1):]
+                #print 'TAGS', tags, repr(info_response)
+            if extra_data_flag & 0x01:
+                game_id, = struct.unpack('<Q', info_response)
+                info_response = info_response[pystruct.calcsize('<Q'):]
+                #print 'GAME ID', game_id, repr(info_response)
+            #print '@' * 79
+
+    def _parse_goldsource_packet(self, info_response):
+        _,\
+        self.name,\
+        self.map,\
+        self.game_dir,\
+        self.description,\
+        self.number_of_players,\
+        self.max_players,\
+        _,\
+        self.is_dedicated,\
+        self.operating_system,\
+        self.password_required,\
+        _,\
+        self.is_secure,\
+        self.number_of_bots,\
+            = struct.unpack('<zzzzzBBBccBBBB', info_response)
+
+        self.version = 'Unknown'
+
+        #print repr(info_response)
+        # goldsource responses don't have the appid. so.... guess
+        app_ids = {
+            'Counter-Strike 1.6': 10,
+            'Counter-Strike': 10
+        }
+
+        if self.description in app_ids:
+            self.app_id = app_ids[self.description]
+        else:
+            raise Exception(
+                'ERROR: %s UNKNOWN DESCRIPTION', 
+                self.description
+            )
+
+    def _get_length(self):
+        return\
+            len(self.name) + 1\
+            + len(self.map) + 1\
+            + len(self.game_dir) + 1\
+            + len(self.description) + 1\
+            + len(self.version) + 1\
+            + pystruct.calcsize('<cchBBBccBB')
 
     # number_of_points includes the new value
     def _cumulative_avg(self, new_value, current_avg, number_of_points):
@@ -148,8 +228,8 @@ class InfoResponse(object):
         # update hotness
         if update_hotness:
             if server.timestamp.month != now.month:
-                server.hotness_this_month = 0
-                server.number_of_hotness_this_month = 0
+                server.hotness_this_month = float(0)
+                server.number_of_hotness_this_month = float(0)
 
             current_hotness = float(0)
 
