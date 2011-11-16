@@ -19,9 +19,9 @@ from optparse import OptionParser
 from kombu.connection import BrokerConnection
 from kombu.messaging import Exchange, Queue, Producer
 
-master_servers = [ ('72.165.61.190', 27011),
-                   ('63.234.149.90', 27011),
-                   ('68.142.72.250', 27012) ]
+master_servers = [ #('209.197.20.34', 27010),
+                   ('63.234.149.90', 27011) ]
+                   #('68.142.72.250', 27012) ]
 
 
 
@@ -97,7 +97,7 @@ def unpack_response(previous_server, response, producer):
         producer.publish(body=body, delivery_mode=1, serializer=None)
 
         length = len(address_strings)
-        #logging.debug('SENT %d SERVERS', length)
+        logging.debug('SENT %d SERVERS', length)
         assert len(response) == 0
     else:
         logging.debug('ERROR, SENT 0 SERVERS')
@@ -108,22 +108,24 @@ def run_full_query(server_address, producer):
     """ Run a full master server query """
 
     
-    MAX_ITERATIONS = 10000
+    MAX_ITERATIONS = 600
     MAX_TIMEOUTS = 5
 
     #servers = set()
     previous_server = DEFAULT_IP
 
     i = 0
+    first_iteration = True
     timeouts = 0
     num_servers = 0
     # get all the ips the master server wishes to give us
     while i < MAX_ITERATIONS and\
-          (i == 0 or previous_server != DEFAULT_IP) and\
+          (first_iteration or previous_server != DEFAULT_IP) and\
           timeouts < MAX_TIMEOUTS:
+        first_iteration = False
 
-        #logging.debug('')
-        #logging.debug('-' * 60)
+        logging.debug('')
+        logging.debug('-' * 60)
 
         # get a string for the last ip the server sent us
         server_string = '%s:%d' % (previous_server)
@@ -138,7 +140,6 @@ def run_full_query(server_address, producer):
         #if len(response_servers) > 0: and\
            #response_servers[-1] not in servers:
         if len(response) > 0:
-
             timeouts = 0
             
             last_server, length = unpack_response(
@@ -148,27 +149,34 @@ def run_full_query(server_address, producer):
             )
             
             if last_server == previous_server:
+                # reset and try again from the beginning.
+                previous_server = DEFAULT_IP
+                num_servers = 0
+
                 logging.debug(
-                    'ERROR? SAME LAST SERVER RECEIVED TWICE: %s',
+                    'ERROR? SAME LAST SERVER RECEIVED TWICE: %s, STARTING OVER',
                     str(last_server)
                 )
+                time.sleep(3)
+            else:
+                num_servers += length
 
             previous_server = last_server
-
-            num_servers += length
 
         elif len(response) == 0:
             timeouts += 1
             logging.debug('EMPTY response received')
 
-        #logging.debug('NUMBER OF SERVERS: %d', num_servers)
-        #logging.debug('-' * 60)
+        logging.debug('NUMBER OF SERVERS: %d', num_servers)
+        logging.debug('-' * 60)
 
         i += 1
 
         # this loop has a tendency to spin fast
         time.sleep(1)
 
+    if i == MAX_ITERATIONS:
+        logging.debug('EXCEEDED MAX ITERATIONS, TERMINATING')
     logging.debug('%d TOTAL SERVERS RECEIVED FROM SERVER', num_servers)
 
 def main():
