@@ -31,6 +31,8 @@ Secure: <span id="secure">${c.server.is_secure_str}</span>
 Version: <span id="version">${c.server.version}</span>
 </br>
 OS: <span id="os">${c.server.operating_system_str}</span>
+</br>
+Hotness: <span id="hotness">${c.server.hotness_all_time}</span>
 </p>
 </div>
 
