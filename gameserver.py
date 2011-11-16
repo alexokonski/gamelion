@@ -56,6 +56,13 @@ class GameServerQuery(object):
         try:
             info_response = QueryServer.InfoResponse(response)
         except Exception as e:
+            logging.debug(
+                '%s:%d EXCEPTION QUERYING SERVER: %s',
+                self.address,
+                self.port,
+                str(e)
+            )
+
             return False
         
         # if this app id doesn't exist, add it and use the game name
@@ -112,7 +119,9 @@ class GameServerQuery(object):
 
             # fill in the rest of the response data
             info_response.fill_server(server)
-            Session.add(server)
+            server = Session.merge(server)
+            Session.commit()
+            #print '%s %s:%d TIME: %s, SELECT timestamp FROM servers WHERE address=\'%s\' AND port=%d;' % (server.name, server.address, server.port, server.timestamp, server.address, server.port)
 
         except sqlalchemy.exc.IntegrityError:
             logging.debug(

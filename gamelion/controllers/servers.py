@@ -40,8 +40,17 @@ class ServersController(BaseController):
                          .order_by(desc(Server.hotness_all_time))
 
         if 'search' not in request.params or request.params['search'] == '':
-            cutoff = datetime.datetime.now() - datetime.timedelta(hours=2)
+            now = datetime.datetime.now()
+            cutoff = now - datetime.timedelta(hours=2)
+            #print '*' * 20, 'CUTOFF:', str(cutoff)
+            #print '*' * 20, now > cutoff
             server_query = server_query.filter(Server.timestamp > cutoff)
+            
+            #stuff = server_query.all()          
+            #print len(stuff), '@' * 77
+            #for server in stuff:
+            #    print server.address, server.port, server.timestamp
+            #print '@' * 77
 
         checkbox_groups = form.get_checkbox_groups()
         kwargs = {}
