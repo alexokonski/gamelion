@@ -235,9 +235,9 @@ if __name__ == "__main__":
 
     connection = BrokerConnection(
         hostname='localhost',
-        userid='alex',
-        password='alex',
-        virtual_hose='/'
+        userid='gamelion',
+        password='gamelion',
+        virtual_host='/'
     )
     channel = connection.channel()
    

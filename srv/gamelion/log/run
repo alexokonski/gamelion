@@ -1,0 +1,4 @@
+#!/bin/bash
+
+umask 0027
+exec setuidgid alex multilog ./main

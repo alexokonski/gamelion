@@ -202,8 +202,8 @@ def main():
     # set up our amqp connection
     connection = BrokerConnection(
         hostname='localhost', 
-        userid='alex', 
-        password='alex',
+        userid='gamelion', 
+        password='gamelion',
         virtual_host='/'
     )
     channel = connection.channel()
