@@ -22,7 +22,9 @@ read -ei $GAMELION_USER -p "What user should gamelion run as? " GAMELION_USER
 
 GAMELION_HOME=/home/$GAMELION_USER
 
-DEBIAN_FRONTEND=noninteractive aptitude install python-dev python-mako python-formencode python-pastescript python-amqplib rabbitmq-server python-pylons git-core postgresql postgresql-client daemontools daemontools-run python-psycopg2
+aptitude update
+
+DEBIAN_FRONTEND=noninteractive aptitude install python-dev python-mako python-formencode python-pastescript python-amqplib rabbitmq-server python-pylons git-core postgresql postgresql-client daemontools daemontools-run python-psycopg2 nginx
 
 if ! id $GAMELION_USER > /dev/null; then
 	adduser --system $GAMELION_USER
@@ -65,9 +67,16 @@ python setup.py develop
 # setup gamelion
 paster setup-app amazon.ini
 
-if ! python -c "import kombu" 2> /dev/null
+# install kombu if needed
+if ! python -c "import kombu" &> /dev/null
 then
 	easy_install kombu
+fi
+
+# install flup if needed
+if ! python -c "import flup" &> /dev/null
+then
+	easy_install flup
 fi
 
 # setup consumer processes
@@ -77,4 +86,47 @@ if [ ! -d $GAMELION_HOME/gamelion/srv/consumer01 ]; then
 	cd $GAMELION_HOME
 fi
 
-ln -s ~/gamelion/srv/gamelion /etc/service/gamelion
+if [ ! -L /etc/service/gamelion ]; then
+	ln -s ~/gamelion/srv/gamelion /etc/service/gamelion
+fi
+
+/sbin/start svscan || true
+
+# set up nginx
+cat >/etc/nginx/sites-available/gamelion <<NGINX
+server {
+	listen 80;
+	server_name localhost;
+	
+	location / {
+		# host and port to fastcgi server
+		fastcgi_pass 127.0.0.1:8080;
+		fastcgi_param PATH_INFO \$fastcgi_script_name;
+		fastcgi_param REQUEST_METHOD \$request_method;
+		fastcgi_param QUERY_STRING \$query_string;
+		fastcgi_param CONTENT_TYPE \$content_type;
+		fastcgi_param CONTENT_LENGTH \$content_length;
+		fastcgi_param SERVER_ADDR \$server_addr;
+		fastcgi_param SERVER_PORT \$server_port;
+		fastcgi_param SERVER_NAME \$server_name;
+		fastcgi_param SERVER_PROTOCOL \$server_protocol;
+		fastcgi_pass_header Authorization;
+		fastcgi_intercept_errors off;
+	}
+	access_log	/var/log/nginx/localhost.access_log;
+	error_log	/var/log/nginx/localhost.error_log;
+}
+NGINX
+
+if [ ! -L /etc/nginx/sites-enabled/gamelion ]; then
+	ln -s /etc/nginx/sites-available/gamelion /etc/nginx/sites-enabled/gamelion
+fi
+
+if [ -L /etc/nginx/sites-enabled/default ]; then
+	# take out default server
+	rm /etc/nginx/sites-enabled/default
+fi
+
+/etc/init.d/nginx restart
+
+echo "Installation Complete"
