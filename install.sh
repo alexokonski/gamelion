@@ -129,4 +129,19 @@ fi
 
 /etc/init.d/nginx restart
 
+# install cron jobs
+CRONTAB=$(mktemp)
+
+crontab -u $GAMELION_USER -l > $CRONTAB || true
+
+# every two hours since this may be running on a micro and 
+# we can't have too many consumers...
+cat >>$CRONTAB <<CRON
+# m h  dom mon dow   command
+*  */2  *   *   *    python $GAMELION_HOME/masterserver.py -d >> ~/masterserver.log
+CRON
+
+crontab -u $GAMELION_USER $CRONTAB
+rm $CRONTAB
+
 echo "Installation Complete"
