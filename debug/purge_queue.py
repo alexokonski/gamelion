@@ -2,8 +2,8 @@ from amqplib import client_0_8 as amqp
 
 amqp_connection = amqp.Connection(
        host='localhost:5672',
-       userid='alex',
-       password='alex',
+       userid='gamelion',
+       password='gamelion',
        virtual_host='/',
        insist=False
 )

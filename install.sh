@@ -138,7 +138,7 @@ crontab -u $GAMELION_USER -l > $CRONTAB || true
 # we can't have too many consumers...
 cat >>$CRONTAB <<CRON
 # m h  dom mon dow   command
-*  */2  *   *   *    python $GAMELION_HOME/masterserver.py -d >> ~/masterserver.log
+0  */2  *   *   *    python $GAMELION_HOME/masterserver.py -d >> ~/masterserver.log 2>&1
 CRON
 
 crontab -u $GAMELION_USER $CRONTAB
