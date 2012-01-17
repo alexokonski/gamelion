@@ -19,8 +19,9 @@ from optparse import OptionParser
 from kombu.connection import BrokerConnection
 from kombu.messaging import Exchange, Queue, Producer
 
-master_servers = [ #('209.197.20.34', 27010),
-                   ('63.234.149.90', 27011) ]
+master_servers = [ #('hl2master.steampowered.com', 27011) ]
+                   ('60.28.158.131', 27011),
+                   ('208.64.200.65', 27015) ]
                    #('68.142.72.250', 27012) ]
 
 
@@ -153,15 +154,20 @@ def run_full_query(server_address, producer):
                 previous_server = DEFAULT_IP
                 num_servers = 0
 
+                global query_socket
+                query_socket.close()
+                query_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                first_iteration = True
+
                 logging.debug(
                     'ERROR? SAME LAST SERVER RECEIVED TWICE: %s, STARTING OVER',
                     str(last_server)
                 )
+                last_server = None
                 time.sleep(3)
             else:
                 num_servers += length
-
-            previous_server = last_server
+                previous_server = last_server
 
         elif len(response) == 0:
             timeouts += 1
