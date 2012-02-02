@@ -20,19 +20,25 @@ def main():
 
     cutoff_date = datetime.datetime.now() - TIMEOUT_CUTOFF
 
-    servers = Session.query(Server)\
-            .filter(Server.timestamp < cutoff_date)\
-            .all()
+    servers = [None]
 
-    logging.debug('DELETING %d SERVERS', len(servers))
-    before_time = time.time()
+    while True:
+        servers = Session.query(Server)\
+                .filter(Server.timestamp < cutoff_date)\
+                .limit(3000).all()
+        
+        if len(servers) == 0:
+            break
 
-    for server in servers:
-        Session.delete(server)
+        logging.debug('DELETING %d SERVERS', len(servers))
+        before_time = time.time()
 
-    Session.commit()
-    after_time = time.time()
+        for server in servers:
+            Session.delete(server)
 
-    logging.debug('DELETED... TOOK %f SECONDS', after_time - before_time)
+        Session.commit()
+        after_time = time.time()
+
+        logging.debug('DELETED... TOOK %f SECONDS', after_time - before_time)
 
 main()
