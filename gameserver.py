@@ -45,7 +45,12 @@ class GameServerQuery(object):
         try:
             sock.sendto(data, (self.address, self.port))
         except socket.error as e:
-            logging.debug('%s addr:%s port:%s', str(e), self.address, str(self.port))
+            logging.debug(
+                '%s addr:%s port:%s', 
+                str(e), 
+                self.address, 
+                str(self.port)
+            )
 
         self.times_sent += 1
 
@@ -68,68 +73,32 @@ class GameServerQuery(object):
         # if this app id doesn't exist, add it and use the game name
         # supplied in the response
         before_time = time.time()
-        try:
-            if not Session.query(Game).get(info_response.app_id):
-                logging.debug('ADDING APP ID: %d, %s', 
-                              info_response.app_id,
-                              info_response.description)
-                game = Game()
-                game.id = info_response.app_id
-                game.name = unicode(
-                    info_response.description, 
-                    encoding='utf-8',
-                    errors='ignore'
-                )
-                Session.add(game)
-                Session.commit()
+        
+        game = Game()
+        game.id = info_response.app_id
+        game.name = unicode(
+            info_response.description, 
+            encoding='utf-8',
+            errors='ignore'
+        )
+        game = Session.merge(game)
 
-            after_time = time.time()
-            if (after_time - before_time) > 1.0:
-                logging.debug(
-                    'GAME QUERY TOOK: %f', 
-                    after_time - before_time
-                )
-
-            results = Session.query(Server)\
-                             .filter(Server.address == self.address)\
-                             .filter(Server.port == self.port)\
-                             .all()
-
-            if len(results) != 1:
-                #logging.debug(
-                #    'ADDING NEW SERVER: %s, %d',
-                #    self.address,
-                #    self.port
-                #)
-
-                server = Server()
-                server.address = self.address
-                server.port = self.port
-                server.hotness_this_month = float(0)
-                server.hotness_all_time = float(0)
-                server.number_of_hotness_this_month = 0
-                server.number_of_hotness_all_time = 0
-            else:
-                server = results[0]
-
-
-            #server = Server()
-            #server.address = self.address
-            #server.port = self.port
-
-            # fill in the rest of the response data
-            info_response.fill_server(server)
-            server = Session.merge(server)
-            Session.commit()
-            #print '%s %s:%d TIME: %s, SELECT timestamp FROM servers WHERE address=\'%s\' AND port=%d;' % (server.name, server.address, server.port, server.timestamp, server.address, server.port)
-
-        except sqlalchemy.exc.IntegrityError:
+        after_time = time.time()
+        if (after_time - before_time) > 1.0:
             logging.debug(
-                'GOT INTEGRITY ERROR, SERVER ALREADY ' + 
-                'INSERTED BY ANOTHER PROCESS' 
+                'GAME QUERY TOOK: %f', 
+                after_time - before_time
             )
-            Session.rollback()
-            return False
+
+        server = Server()
+        server.address = self.address
+        server.port = self.port
+        server = Session.merge(server)
+        
+        # fill in the rest of the response data
+        info_response.fill_server(server)
+        Session.commit()
+        #print '%s %s:%d TIME: %s, SELECT timestamp FROM servers WHERE address=\'%s\' AND port=%d;' % (server.name, server.address, server.port, server.timestamp, server.address, server.port)
 
         return True
 
@@ -138,13 +107,14 @@ class GameServerQuery(object):
         if server:
             if server.timeouts >= MAX_SERVER_LIFETIME_TIMEOUTS:
                 logging.debug(
-                    'DELETING SERVER, EXCEEDED LIFETIME TIMEOUTS: %s', 
-                    server.name
+                'DELETING SERVER, EXCEEDED LIFETIME TIMEOUTS: %s',
+                server.name
                 )
                 Session.delete(server)
             else:
                 server.timeouts += 1
                 Session.add(server)
+
 
 def process_servers():
     TIMEOUT = 2 

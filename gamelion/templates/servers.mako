@@ -67,6 +67,7 @@ ${pager()}
     <th>Hotness</th>
     <th>Last Update</th>
     <th>IP Address</th>
+    <th>Tags</th>
 </tr>
 <% isAlt = False %>
 <% now = datetime.datetime.now() %>
@@ -89,6 +90,7 @@ ${pager()}
 
         <td>${get_time_string(seconds=seconds, significant_only=True)}</td>
         <td>${server.address}:${server.port}</td>
+        <td>${", ".join(server.tags_str)}</td>
     </tr>
     <% isAlt = not isAlt %>
 % endfor

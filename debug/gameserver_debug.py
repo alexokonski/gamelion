@@ -22,7 +22,7 @@ load_environment(conf.global_conf, conf.local_conf)
 # define a query
 class GameServerQuery(object):
     def __init__(self, server):
-        self.server = server
+        self.server = Session.merge(server)
         self.time = 0
         self.times_sent = 0
 
@@ -44,22 +44,15 @@ class GameServerQuery(object):
         else:
             logging.debug('UPDATING SERVER: %s', info_response.name)
         
-        # if this app id doesn't exist, add it and use the game name
-        # supplied in the response
-        if Session.query(Game)\
-                  .filter(Game.id == info_response.app_id)\
-                  .first() == None:
-            logging.debug('ADDING APP ID: %d, %s', 
-                          info_response.app_id,
-                          info_response.description)
-            game = Game()
-            game.id = info_response.app_id
-            game.name = unicode(info_response.description, encoding='utf-8')
-            Session.add(game)
-            Session.commit()
-
-        info_response.fill_server(self.server)
+        Session.autoflush = False
+        game = Game()
+        game.id = info_response.app_id
+        game.name = unicode(info_response.description, encoding='utf-8')
         
+        self.server.game = Session.merge(game)
+        info_response.fill_server(self.server)
+        self.server = Session.merge(self.server)
+        Session.autoflush = True
         return True
 
 # main loop
@@ -74,8 +67,6 @@ def query_servers(query_found_only, query_in_random_order, address):
     
     if address != None:
         (ip, port) = address.split(':')
-        server_query = server_query.filter(Server.address == ip)\
-                                   .filter( Server.port == port)
     else:
         if query_found_only:
             # only get servers with a name already filled in
@@ -89,7 +80,11 @@ def query_servers(query_found_only, query_in_random_order, address):
             server_query = server_query.order_by(Server.name != None)
 
     logging.debug('RUNNING QUERY')
-    servers = server_query.all()
+    if address == None:
+        servers = server_query.all()
+    else:
+        servers = []
+
     logging.debug('GOT %d SERVERS', len(servers))
     logging.debug('QUERY COMPLETE')
 
@@ -99,18 +94,11 @@ def query_servers(query_found_only, query_in_random_order, address):
     if address != None and len(servers) == 0:
         server = Server()
         server.address = ip
-        server.port = port
-        server.timestamp = datetime.now()
-        Session.add(server)
-        Session.commit()
+        server.port = int(port)
         queries[(server.address, server.port)] = GameServerQuery(server)
     else:
         for server in servers:
             queries[(server.address, server.port)] = GameServerQuery(server)
-    
-    logging.debug('DICT GENERATED')
-
-    #queries = map(lambda s: GameServerQuery(s), servers) 
     
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
@@ -133,9 +121,7 @@ def query_servers(query_found_only, query_in_random_order, address):
 
         # process response(s) if we got any (i.e. didn't time out)
         while True:
-            logging.debug('SELECTING')
             readable, _, _ = select.select([sock], [], [], TIMEOUT)
-            logging.debug('SELECT FINISHED')
 
             if len(readable) == 0:
                 break

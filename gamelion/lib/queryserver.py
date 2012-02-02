@@ -4,6 +4,9 @@ import gamelion.lib.stringz as struct
 import logging
 from datetime import datetime
 from gamelion.model import *
+import re
+
+TAGGABLE_GAMES = [ 240, 440 ] # CSS, TF2
 
 # http://darklaunch.com/2009/10/06/python-time-duration-human-friendly-timestamp
 def get_time_string(seconds, significant_only=False):
@@ -98,6 +101,7 @@ class InfoResponse(object):
 
         info_response = info_response[self._get_length():]
 
+        self.tags = []
         if len(info_response) > 0:
             extra_data_flag, = struct.unpack('<B', info_response)
             info_response = info_response[pystruct.calcsize('<B'):]
@@ -118,10 +122,21 @@ class InfoResponse(object):
                 info_response = info_response[
                     (pystruct.calcsize('<H') + len(name) + 1):]
                 #print 'SPECTATOR INFO', port, name, repr(info_response)
-            if extra_data_flag & 0x20:
+            if extra_data_flag & 0x20 and self.app_id in TAGGABLE_GAMES:
                 tags, = struct.unpack('<z', info_response)
                 info_response = info_response[(len(tags) + 1):]
-                #print 'TAGS', tags, repr(info_response)
+                tags = re.split('[\\\,;!|]+', tags)
+                MAX_LENGTH = Tag.name.property.columns[0].type.length
+                for tag in tags:
+                    name = unicode(
+                        tag[:MAX_LENGTH],
+                        encoding='utf-8',
+                        errors='ignore'
+                    )
+                    self.tags.append(Session.merge(Tag(name)))
+                #print 'DESC:', self.description
+                #print 'TAGS:', self.tags
+                #print
             if extra_data_flag & 0x01:
                 game_id, = struct.unpack('<Q', info_response)
                 info_response = info_response[pystruct.calcsize('<Q'):]
@@ -146,6 +161,7 @@ class InfoResponse(object):
             = struct.unpack('<zzzzzBBBccBBBB', info_response)
 
         self.version = 'Unknown'
+        self.tags = [] 
 
         #print repr(info_response)
         # goldsource responses don't have the appid. so.... guess
@@ -215,7 +231,9 @@ class InfoResponse(object):
             encoding='utf-8',
             errors='ignore'
         )
-        
+
+        server.tags = self.tags
+
         # reset consecutive timeouts counter
         server.timeouts = 0
 
@@ -245,6 +263,12 @@ class InfoResponse(object):
                 if number_of_players == self.max_players:
                     current_hotness += float(self.max_players) * 0.25
 
+            if server.hotness_this_month == None:
+                server.hotness_this_month = float(0)
+
+            if server.number_of_hotness_this_month == None:
+                server.number_of_hotness_this_month = 0
+
             server.number_of_hotness_this_month += 1
             server.hotness_this_month = self._cumulative_avg(
                 current_hotness,
@@ -252,7 +276,14 @@ class InfoResponse(object):
                 server.number_of_hotness_this_month
             )
 
+            if server.hotness_all_time == None:
+                server.hotness_all_time = float(0)
+
+            if server.number_of_hotness_all_time == None:
+                server.number_of_hotness_all_time = 0
+
             server.number_of_hotness_all_time += 1
+
             server.hotness_all_time = self._cumulative_avg(
                 current_hotness,
                 server.hotness_all_time,

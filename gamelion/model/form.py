@@ -15,7 +15,7 @@ class Checkbox(object):
         raise NotImplementedError
 
 class CheckboxGroup(object):
-    def __init__(self, label, checkboxes, number_initially_visible=3):
+    def __init__(self, label, checkboxes, number_initially_visible=4):
         self.label = label
         self.checkboxes = checkboxes
         self.number_initially_visible = number_initially_visible
@@ -72,9 +72,10 @@ class ServerOptionCheckboxGroup(CheckboxGroup):
 _apps = [
     AppIDCheckbox(name='css', app_id=240, label='Counter-Strike: Source'),
     AppIDCheckbox(name='tf2', app_id=440, label='Team Fortress 2'),
+    AppIDCheckbox(name='cs', app_id=10, label='Counter-Strike'),
+    AppIDCheckbox(name='mw3', app_id=-22846, label='CoD: Modern Warfare 3'),
     AppIDCheckbox(name='l4d2', app_id=550, label='Left 4 Dead 2'), 
     AppIDCheckbox(name='gm', app_id=4000, label='Garry\'s Mod'),
-    AppIDCheckbox(name='cs', app_id=10, label='Counter-Strike'),
     AppIDCheckbox(name='hl', app_id=70, label='Half-Life'),
     AppIDCheckbox(name='kf', app_id=1250, label='Killing Floor'),
     AppIDCheckbox(name='dys', app_id=17580, label='Dystopia'),
@@ -129,6 +130,7 @@ class SearchForm(Schema):
     dys = Int(min=0, max=1)
     tws2 = Int(min=0, max=1)
     dods = Int(min=0, max=1)
+    mw3 = Int(min=0, max=1)
 
     vac = Int(min=0, max=1)
     not_full = Int(min=0, max=1)

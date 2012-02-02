@@ -23,4 +23,9 @@ def setup_app(command, conf, vars):
     game.id = 440
     game.name = "Team Fortress 2"
     Session.add(game)
+
+    game.id = -22846
+    game.name = "CoD: Modern Warfare 3"
+    Session.add(game)
+
     Session.commit()

@@ -20,6 +20,8 @@ Players: <span id="players">${c.server.number_of_players}/${c.server.max_players
 Map: <span id="map">${c.server.map}</span>
 </br>
 Password: <span id="password">${c.server.password_required_str}</span>
+</br>
+Tags: <span id="tags"> ${", ".join(c.server.tags_str)}</span>
 </p>
 </div>
 <div id="settings_right">
