@@ -36,22 +36,26 @@ class GameServerQuery(object):
     def process_response(self, response):
         # get the message header to see if it's a split message or not
         # TODO: handle split responses
-        
+
+        before = time.time()
         info_response = QueryServer.InfoResponse(response)
-        
+        print '********************* PARSING TOOK', time.time() - before
+
         if self.server.name == None:
             logging.debug('ADDING SERVER: %s', info_response.name)
         else:
             logging.debug('UPDATING SERVER: %s', info_response.name)
         
         Session.autoflush = False
+        before = time.time()
         game = Game()
         game.id = info_response.app_id
         game.name = unicode(info_response.description, encoding='utf-8')
         
         self.server.game = Session.merge(game)
-        info_response.fill_server(self.server)
         self.server = Session.merge(self.server)
+        info_response.fill_server(self.server)
+        print '************** FILLING TOOK', time.time() - before
         Session.autoflush = True
         return True
 

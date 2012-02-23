@@ -45,7 +45,7 @@ class ServersController(BaseController):
             cutoff = now - datetime.timedelta(hours=2)
             #print '*' * 20, 'CUTOFF:', str(cutoff)
             #print '*' * 20, now > cutoff
-            server_query = server_query.filter(Server.timestamp > cutoff)
+            #server_query = server_query.filter(Server.timestamp > cutoff)
             
             #stuff = server_query.all()          
             #print len(stuff), '@' * 77

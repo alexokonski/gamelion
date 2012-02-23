@@ -67,10 +67,16 @@ class Server(Base):
         secondary=tag_map,
         cascade="all",
         passive_deletes=True,
-        backref="servers"
+        backref="servers",
+        lazy="subquery"
     )
 
-    game = relationship(Game, cascade="all")
+    game = relationship(
+        Game, 
+        cascade="save-update, merge", 
+        lazy="subquery"
+    )
+
 
     @synonym_for('tags')
     @property

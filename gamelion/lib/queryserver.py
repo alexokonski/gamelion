@@ -125,15 +125,17 @@ class InfoResponse(object):
             if extra_data_flag & 0x20 and self.app_id in TAGGABLE_GAMES:
                 tags, = struct.unpack('<z', info_response)
                 info_response = info_response[(len(tags) + 1):]
-                tags = re.split('[\\\,;!|]+', tags)
+                self.tags = re.split('[\\\,;!|]+', tags)
                 MAX_LENGTH = Tag.name.property.columns[0].type.length
-                for tag in tags:
+                '''for tag in tags:
                     name = unicode(
                         tag[:MAX_LENGTH],
                         encoding='utf-8',
                         errors='ignore'
                     )
                     self.tags.append(Session.merge(Tag(name)))
+                    #self.tags.append(Tag(name))'''
+
                 #print 'DESC:', self.description
                 #print 'TAGS:', self.tags
                 #print
@@ -232,7 +234,12 @@ class InfoResponse(object):
             errors='ignore'
         )
 
-        server.tags = self.tags
+        server_tags = server.tags_str
+        for tag in self.tags:
+            if tag not in server_tags:
+                server.tags.append(Session.merge(Tag(tag)))
+
+        #server.tags = self.tags
 
         # reset consecutive timeouts counter
         server.timeouts = 0

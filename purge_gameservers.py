@@ -2,6 +2,7 @@ from paste.deploy import appconfig
 from pylons import config
 from gamelion.config.environment import load_environment
 from gamelion.model import *
+from sqlalchemy.orm import joinedload_all
 import datetime 
 import time
 import logging
@@ -25,7 +26,7 @@ def main():
     while True:
         servers = Session.query(Server)\
                 .filter(Server.timestamp < cutoff_date)\
-                .limit(3000).all()
+                .limit(70).all()
         
         if len(servers) == 0:
             break

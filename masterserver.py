@@ -20,9 +20,9 @@ from kombu.connection import BrokerConnection
 from kombu.messaging import Exchange, Queue, Producer
 
 master_servers = [ #('hl2master.steampowered.com', 27011) ]
-                   ('60.28.158.131', 27011),
-                   ('208.64.200.65', 27015) ]
-                   #('68.142.72.250', 27012) ]
+                   ('68.177.101.62', 27010),
+                   ('208.64.200.52', 27011),
+                   ('68.142.72.250', 27012) ]
 
 
 

@@ -28,7 +28,7 @@ server_buffer = {}
 display_waiting = True
 last_waiting_time = datetime.now() 
 
-QUERY_CHUNK_SIZE = 25 
+QUERY_CHUNK_SIZE = 20 
 CONSUME_TIMEOUT = 5
 MAX_SERVER_LIFETIME_TIMEOUTS = 10
 
@@ -95,9 +95,11 @@ class GameServerQuery(object):
         server.port = self.port
         server = Session.merge(server)
         
+        Session.autoflush = False
         # fill in the rest of the response data
         info_response.fill_server(server)
-        Session.commit()
+        #Session.commit()
+        Session.autoflush = True
         #print '%s %s:%d TIME: %s, SELECT timestamp FROM servers WHERE address=\'%s\' AND port=%d;' % (server.name, server.address, server.port, server.timestamp, server.address, server.port)
 
         return True
